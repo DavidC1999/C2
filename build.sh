@@ -1,1 +1,1 @@
-gcc main.c -o out/compiler
+gcc -g helperfunctions.c main.c -o out/compiler

@@ -1,4 +1,4 @@
 
-fun main() {
-	print("Hello world!")
+func main() {
+	print(10);
 }
