@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "tokenizer.h"
+#include "parser.h"
 
 
 void read_file(FILE* file, size_t n, char* buffer) {
@@ -26,6 +27,7 @@ size_t get_file_size(FILE* file) {
 int main(int argc, char** argv) {
 	if(argc != 2) {
 		fprintf(stderr, "Please specify file\n");
+		exit(1);
 	}
 
 
@@ -42,6 +44,10 @@ int main(int argc, char** argv) {
 	tokenize(buffer, &tokens);
 	
 	print_tokens(tokens->head);
+
+	ParseNode* tree = parse(tokens);
+
+	parser_print_tree(tree, 0);
 
 	free_token(tokens->head);
 

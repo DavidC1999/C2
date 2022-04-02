@@ -7,11 +7,30 @@
 #include "tokenizer.h"
 #include "helperfunctions.h"
 
+int _curr_line = 1;
+
+char* token_type_to_name[] = {
+	"T_HEAD",
+	"T_NUMBER",
+	"T_IDENTIFIER",
+	"T_KEYWORD",
+	"T_LPAREN",
+	"T_RPAREN",
+	"T_LBRACE",
+	"T_RBRACE",
+	"T_SEMICOLON"
+};
+
+char* keyword_type_to_name[] = {
+	"K_FUNC"
+};
+
 void append_token(TokenLL* tokens, int new_type, void* data) {
 	Token* new_token = (Token*)malloc(sizeof(Token));
 	new_token->type = new_type;
 	new_token->next = NULL;
 	new_token->data = data;
+	new_token->line = _curr_line;
 	
 	tokens->tail->next = new_token;
 	tokens->tail = new_token;
@@ -113,6 +132,7 @@ void tokenize(char* text, TokenLL** result) {
 			append_token(*result, T_SEMICOLON, NULL);
 			++text;
 		} else if (tokenizer_should_skip(*text)) {
+			if(*text == '\n') ++_curr_line;
 			++text;
 		} else {
 			fprintf(stderr, "Unexpected char: %c\n", *text);
@@ -121,18 +141,8 @@ void tokenize(char* text, TokenLL** result) {
 	}
 
 	(*result)->head = head->next;
+	(*result)->current = (*result)->head;
 	free(head);
-}
-
-void print_keyword(int keyword_ident) {
-	switch(keyword_ident) {
-		case K_FUNC:
-			printf("func");
-			break;
-		default:
-			printf("unknown");
-			break;
-	}
 }
 
 void print_tokens(Token* node) {
@@ -149,9 +159,7 @@ void print_tokens(Token* node) {
 			printf("IDENTIFIER: %s -> ", (char*)node->data);
 			break;
 		case T_KEYWORD:
-			printf("KEYWORD: ");
-			print_keyword(*((int*)(node->data)));
-			printf(" -> ");
+			printf("KEYWORD: %s -> ", keyword_type_to_name[*(int*)node->data]);
 			break;
 		case T_NUMBER:
 			printf("NUMBER: %d -> ", *(int*)node->data);
