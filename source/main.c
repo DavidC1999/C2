@@ -23,8 +23,13 @@ size_t get_file_size(FILE* file) {
 	return size;
 }
 
-int main(void) {
-	FILE* file = fopen("testfile.prog", "r");
+int main(int argc, char** argv) {
+	if(argc != 2) {
+		fprintf(stderr, "Please specify file\n");
+	}
+
+
+	FILE* file = fopen(argv[1], "r");
 	size_t file_size = get_file_size(file);
 	char* buffer = (char*)malloc(sizeof(char) * file_size);
 	
@@ -32,11 +37,13 @@ int main(void) {
 
 	fclose(file);
 	
-	Token* tokens;
+	TokenLL* tokens;
 
 	tokenize(buffer, &tokens);
 	
-	print_tokens(tokens);
+	print_tokens(tokens->head);
+
+	free_token(tokens->head);
 
 	free(buffer);
 
