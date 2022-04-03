@@ -5,6 +5,7 @@
 
 #include "tokenizer.h"
 #include "parser.h"
+#include "interpreter.h"
 
 
 void read_file(FILE* file, size_t n, char* buffer) {
@@ -30,7 +31,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-
+	// reading file:
 	FILE* file = fopen(argv[1], "r");
 	size_t file_size = get_file_size(file);
 	char* buffer = (char*)malloc(sizeof(char) * file_size);
@@ -39,16 +40,22 @@ int main(int argc, char** argv) {
 
 	fclose(file);
 	
+	// Tokenizing file:
 	TokenLL* tokens;
 
 	tokenize(buffer, &tokens);
 	
 	print_tokens(tokens->head);
 
+	// Parsing tokens:
 	ParseNode* tree = parse(tokens);
 
 	parser_print_tree(tree, 0);
 
+	// Interpreting:
+	interpret(tree);
+
+	// Cleanup:
 	free_AST(tree);
 
 	free_token(tokens->head);

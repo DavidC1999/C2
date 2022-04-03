@@ -10,7 +10,7 @@ void parser_advance_token(TokenLL* tokens) {
 	tokens->current = tokens->current->next;
 }
 
-void panic(char* message, int line) {
+static void panic(char* message, int line) {
 	fprintf(stderr, "Parser error on line %d: %s\n", line, message);
 	exit(1);
 }
@@ -117,6 +117,7 @@ ParseNode* parse(TokenLL* tokens) {
 	result->type = N_ROOT;
 
 	result->data = parser_get_function_definition(tokens);
+	result->line = 0;
 	return result;
 }
 
