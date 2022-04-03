@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "parser.h"
 #include "tokenizer.h"
@@ -35,14 +36,20 @@ void parser_expect_keyword(Token* token, int expected_keyword) {
 ParseNode* parser_get_function_call(TokenLL* tokens) {
 	parser_expect_token_type(tokens->current, T_IDENTIFIER);
 	int line = tokens->current->line;
-	char* name = tokens->current->data;
+
+	size_t name_len = strlen(tokens->current->data);
+	char* name = (char*)malloc(sizeof(char) * (name_len + 1));
+	strncpy(name, tokens->current->data, name_len);
+	name[name_len] = '\0';
 	parser_advance_token(tokens);
 
 	parser_expect_token_type(tokens->current, T_LPAREN);
 	parser_advance_token(tokens);
 
 	parser_expect_token_type(tokens->current, T_NUMBER);
-	int* param = tokens->current->data;
+	int* param = (int*)malloc(sizeof(int));
+	*param = *(int*)tokens->current->data;
+
 	parser_advance_token(tokens);
 
 	parser_expect_token_type(tokens->current, T_RPAREN);
@@ -59,9 +66,15 @@ ParseNode* parser_get_function_call(TokenLL* tokens) {
 }
 
 ParseNode* parser_get_statement(TokenLL* tokens) {
-	ParseNode* result = parser_get_function_call(tokens);
+	ParseNode* func_call = parser_get_function_call(tokens);
 	parser_expect_token_type(tokens->current, T_SEMICOLON);
 	parser_advance_token(tokens);
+
+	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode*));
+	result->type = N_STATEMENT;
+	result->line = func_call->line;
+	((ParseNode**)(result->data))[0] = func_call;
+
 	return result;
 }
 
@@ -71,9 +84,11 @@ ParseNode* parser_get_function_definition(TokenLL* tokens) {
 	parser_advance_token(tokens);
 	
 	parser_expect_token_type(tokens->current, T_IDENTIFIER);
-	char* identifier_name = tokens->current->data;
+	size_t identifier_len = strlen(tokens->current->data);
+	char* identifier_name = (char*)malloc(sizeof(char) * (identifier_len + 1));
+	strncpy(identifier_name, tokens->current->data, identifier_len);
+	identifier_name[identifier_len] = '\0';
 	parser_advance_token(tokens);
-
 
 	parser_expect_token_type(tokens->current, T_LPAREN);
 	parser_advance_token(tokens);
@@ -103,6 +118,26 @@ ParseNode* parse(TokenLL* tokens) {
 
 	result->data = parser_get_function_definition(tokens);
 	return result;
+}
+
+void free_AST(ParseNode* node) {
+	switch(node->type) {
+		case N_ROOT:
+			free_AST(node->data);
+			break;
+		case N_FUNC_DEF:
+			free(((char**)(node->data))[0]);
+			free_AST(((ParseNode**)(node->data))[1]);
+			break;
+		case N_STATEMENT:
+			free_AST(((ParseNode**)(node->data))[0]);
+			break;
+		case N_FUNC_CALL:
+			free(((char**)(node->data))[0]);
+			free(((int**)(node->data))[1]);
+			break;
+	}
+	free(node);
 }
 
 void parser_print_indent(int amt) {

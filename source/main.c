@@ -49,6 +49,8 @@ int main(int argc, char** argv) {
 
 	parser_print_tree(tree, 0);
 
+	free_AST(tree);
+
 	free_token(tokens->head);
 
 	free(buffer);

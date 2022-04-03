@@ -18,5 +18,6 @@ typedef struct ParseNode {
 
 ParseNode* parse(TokenLL* tokens);
 void parser_print_tree(ParseNode* node, int indent);
+void free_AST(ParseNode* node);
 
 #endif // _PARSER_H
