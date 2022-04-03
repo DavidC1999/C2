@@ -116,27 +116,33 @@ ParseNode* parse(TokenLL* tokens) {
 	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
 	result->type = N_ROOT;
 
-	result->data = parser_get_function_definition(tokens);
+	if(tokens->head == NULL) {
+		result->data = NULL;
+	} else {
+		result->data = parser_get_function_definition(tokens);
+	}
 	result->line = 0;
 	return result;
 }
 
 void free_AST(ParseNode* node) {
-	switch(node->type) {
-		case N_ROOT:
-			free_AST(node->data);
-			break;
-		case N_FUNC_DEF:
-			free(((char**)(node->data))[0]);
-			free_AST(((ParseNode**)(node->data))[1]);
-			break;
-		case N_STATEMENT:
-			free_AST(((ParseNode**)(node->data))[0]);
-			break;
-		case N_FUNC_CALL:
-			free(((char**)(node->data))[0]);
-			free(((int**)(node->data))[1]);
-			break;
+	if(node->data != NULL) { 
+		switch(node->type) {
+			case N_ROOT:
+				free_AST(node->data);
+				break;
+			case N_FUNC_DEF:
+				free(((char**)(node->data))[0]);
+				free_AST(((ParseNode**)(node->data))[1]);
+				break;
+			case N_STATEMENT:
+				free_AST(((ParseNode**)(node->data))[0]);
+				break;
+			case N_FUNC_CALL:
+				free(((char**)(node->data))[0]);
+				free(((int**)(node->data))[1]);
+				break;
+		}
 	}
 	free(node);
 }
@@ -152,12 +158,14 @@ void parser_print_tree(ParseNode* node, int indent) {
 		case N_ROOT:
 			parser_print_indent(indent);
 			printf("{\n");
-
-			parser_print_indent(indent + 1);
-			printf("Function definition: {\n");
-			parser_print_tree(node->data, indent + 2);
-			parser_print_indent(indent + 1);
-			printf("}\n");
+			
+			if(node->data != NULL) {
+				parser_print_indent(indent + 1);
+				printf("Function definition: {\n");
+				parser_print_tree(node->data, indent + 2);
+				parser_print_indent(indent + 1);
+				printf("}\n");
+			}
 
 			parser_print_indent(indent);
 			printf("}\n");
