@@ -150,9 +150,11 @@ void interpret(ParseNode* node) {
 		strncpy(buffer, "Interpreting should start at root node", 100);
 		panic(buffer, 0);
 	}
-
-	if(node->data != NULL) {
-		visit_node(node);
+	
+	int function_amt = *((int**)node->data)[0];
+	for(int i = 0; i < function_amt; ++i) {
+		ParseNode* funcs = ((ParseNode**)node->data)[1];
+		visit_node(&funcs[i]);
 	}
 
 	bool success = call_func("main", 0);

@@ -6,7 +6,7 @@
 #include "tokenizer.h"
 
 void parser_advance_token(TokenLL* tokens) {
-	if(tokens->current->next == NULL) return;
+	if(tokens->current == NULL) return;
 	tokens->current = tokens->current->next;
 }
 
@@ -113,6 +113,7 @@ ParseNode* parser_get_function_definition(TokenLL* tokens) {
 	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
 	result->type = N_FUNC_DEF;
 	result->line = line;
+	// TODO: I do not think this is the correct size calculation:
 	result->data = malloc(sizeof(void*) * (2 + statement_counter));
 	((char**)result->data)[0] = identifier_name;
 	
@@ -131,15 +132,37 @@ ParseNode* parser_get_function_definition(TokenLL* tokens) {
 }
 
 ParseNode* parse(TokenLL* tokens) {
+	// TODO: resizing array
+	ParseNode* functions[1000];
+	int functions_counter = 0;
+	while(tokens->current != NULL &&
+			tokens->current->type == T_KEYWORD &&
+			*(int*)tokens->current->data == K_FUNC) {
+		functions[functions_counter++] = parser_get_function_definition(tokens);
+	}
+
+	if(tokens->current != NULL) {
+		char buffer[100];
+		snprintf(buffer, 100, "Unexpected token at end of parsing: %s", token_type_to_name[tokens->current->type]);
+		panic(buffer, tokens->current->line);
+	}
+
 	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
 	result->type = N_ROOT;
-
-	if(tokens->head == NULL) {
-		result->data = NULL;
-	} else {
-		result->data = parser_get_function_definition(tokens);
-	}
 	result->line = 0;
+	result->data = malloc(sizeof(void*) * 2);
+	// result->data = (ParseNode*)malloc(sizeof(ParseNode) * functions_counter);
+	((int**)result->data)[0] = (int*)malloc(sizeof(int));
+	*(((int**)result->data)[0]) = functions_counter;
+	((ParseNode**)result->data)[1] = (ParseNode*)malloc(sizeof(ParseNode) * functions_counter);
+
+	for(int i = 0; i < functions_counter; ++i) {
+		((ParseNode**)result->data)[1][i].type = functions[i]->type;
+		((ParseNode**)result->data)[1][i].line = functions[i]->line;
+		((ParseNode**)result->data)[1][i].data = functions[i]->data;
+		free(functions[i]);
+	}
+
 	return result;
 }
 
@@ -147,6 +170,8 @@ void free_AST(ParseNode* node) {
 	if(node->data != NULL) { 
 		switch(node->type) {
 			case N_ROOT:
+				fprintf(stderr, "Freeing root node is not properly implemented\n");
+				exit(1);
 				free_AST(node->data);
 				break;
 			case N_FUNC_DEF:
@@ -180,22 +205,26 @@ void parser_print_indent(int amt) {
 
 void parser_print_tree(ParseNode* node, int indent) {
 	switch(node->type) {
-		case N_ROOT:
+		case N_ROOT: {
 			parser_print_indent(indent);
-			printf("{\n");
+			printf("[\n");
+
+			int function_amt = *((int**)node->data)[0];
 			
-			if(node->data != NULL) {
+			for(int i = 0; i < function_amt; ++i) {
 				parser_print_indent(indent + 1);
 				printf("Function definition: {\n");
-				parser_print_tree(node->data, indent + 2);
+				ParseNode* funcs = ((ParseNode**)node->data)[1];
+				parser_print_tree(&funcs[i], indent + 2);
 				parser_print_indent(indent + 1);
 				printf("}\n");
 			}
 
 			parser_print_indent(indent);
-			printf("}\n");
+			printf("]\n");
 			break;
-		case N_FUNC_DEF:
+		}
+		case N_FUNC_DEF: {
 			parser_print_indent(indent);
 			printf("Name: %s\n", ((char**)(node->data))[0]);
 			parser_print_indent(indent);
@@ -207,19 +236,22 @@ void parser_print_tree(ParseNode* node, int indent) {
 			parser_print_indent(indent);
 			printf("]\n");
 			break;
-		case N_STATEMENT:
+		}	
+		case N_STATEMENT: {
 			parser_print_indent(indent);
 			printf("Function call: {\n");
 			parser_print_tree(((ParseNode**)(node->data))[0], indent + 1);
 			parser_print_indent(indent);
 			printf("}\n");
 			break;
-		case N_FUNC_CALL:
+		}
+		case N_FUNC_CALL: {
 			parser_print_indent(indent);
 			printf("Identifier: %s\n", ((char**)(node->data))[0]);
 			parser_print_indent(indent);
 			printf("Param: %d\n", *(((int**)(node->data))[1]));
 			break;
+		}
 	}
 
 }

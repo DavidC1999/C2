@@ -6,7 +6,7 @@
 #define MAX_STATEMENTS_PER_FUNC 1000
 
 enum ParseNodeTypes {
-	N_ROOT, // ParseNode* function_definition
+	N_ROOT, // ParseNode*[] function_definitions
 	N_FUNC_DEF, // char* name, int* count, ParseNode* statements
 	N_STATEMENT, // ParseNode* function_call
 	N_FUNC_CALL // char* name, int* param
@@ -15,7 +15,7 @@ enum ParseNodeTypes {
 typedef struct ParseNode {
 	int type;
 	int line;
-	void* data;
+	void* data; // TODO: use unions instead of void*. This is madness.
 } ParseNode;
 
 ParseNode* parse(TokenLL* tokens);

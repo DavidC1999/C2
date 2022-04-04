@@ -1,6 +1,17 @@
 
+func myFunc() {
+	putc(69);
+	putc(10);
+}
+
 func main() {
 	print(456);
+	someOtherFunc(0);
+}
+
+
+func someOtherFunc() {
 	putc(68);
 	putc(10);
+	myFunc(0);
 }
