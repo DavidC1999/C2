@@ -15,10 +15,15 @@ void builtin_print(int param) {
 	printf("%d\n", param);
 }
 
+void builtin_putc(int param) {
+	printf("%c", (char)param);
+}
+
 typedef struct UserFunc {
 	bool taken;
 	char name[MAX_FUNCTION_NAME_LEN];
-	ParseNode* statement;
+	int statement_amt;
+	ParseNode* statements;
 } UserFunc;
 
 static UserFunc user_functions[MAX_USER_FUNCTIONS];
@@ -42,9 +47,12 @@ static void init_funcs() {
 	
 	strncpy(builtin_functions[0].name, "print", MAX_FUNCTION_NAME_LEN);
 	builtin_functions[0].func = builtin_print;
+	
+	strncpy(builtin_functions[1].name, "putc", MAX_FUNCTION_NAME_LEN);
+	builtin_functions[1].func = builtin_putc;
 }
 
-static void define_func(char* name, ParseNode* statement) {
+static void define_func(char* name, int line, int statement_amt, ParseNode* statements) {
 	// printf("Defining function \"%s\"\n", name);
 
 	// Find first free spot in user_functions array:
@@ -58,17 +66,17 @@ static void define_func(char* name, ParseNode* statement) {
 	}
 
 	if(!found_empty_spot) {
-		panic("Too many function definitions", statement->line);
+		panic("Too many function definitions", line);
 	}
 
 	user_functions[i].taken = true;
 
-	strncpy(user_functions[i].name, name, MAX_FUNCTION_NAME_LEN);
-	user_functions[i].statement = statement;
+	strncpy(user_functions[i].name, name, strlen(name) + 1);
+	user_functions[i].statement_amt = statement_amt;
+	user_functions[i].statements = statements;
 }
 
 static bool call_func(char* name, int param) {
-	// printf("Calling function \"%s\" with param %d\n", name, param);
 	int i;
 	bool found_user_func = false;
 	for(i = 0; i < MAX_USER_FUNCTIONS; ++i) {
@@ -79,7 +87,8 @@ static bool call_func(char* name, int param) {
 	}
 
 	if(found_user_func) {
-		visit_node(user_functions[i].statement);
+		for(int j = 0; j < user_functions[i].statement_amt; ++j)
+			visit_node(&user_functions[i].statements[j]);
 		return true;
 	}
 	
@@ -107,8 +116,11 @@ static void visit_node(ParseNode* node) {
 		}
 		case N_FUNC_DEF: {
 			char* name = ((char**)node->data)[0];
-			ParseNode* statement = ((ParseNode**)node->data)[1];
-			define_func(name, statement);
+			int statement_amt = *(((int**)node->data)[1]);
+
+			ParseNode* statements = ((ParseNode**)node->data)[2];
+
+			define_func(name, node->line, statement_amt, statements);
 			break;
 		}
 		case N_STATEMENT: {

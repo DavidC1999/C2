@@ -1,4 +1,6 @@
 
 func main() {
-	print(10);
+	print(456);
+	putc(68);
+	putc(10);
 }

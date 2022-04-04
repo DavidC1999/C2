@@ -3,9 +3,11 @@
 
 #include "tokenizer.h"
 
+#define MAX_STATEMENTS_PER_FUNC 1000
+
 enum ParseNodeTypes {
 	N_ROOT, // ParseNode* function_definition
-	N_FUNC_DEF, // char* name, ParseNode* statement 
+	N_FUNC_DEF, // char* name, int* count, ParseNode* statements
 	N_STATEMENT, // ParseNode* function_call
 	N_FUNC_CALL // char* name, int* param
 };
