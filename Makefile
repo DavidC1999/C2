@@ -1,6 +1,6 @@
 CC=gcc
 CFLAGS=-W -Wall -Wextra -Werror -g -std=c11
-TARGET=compiler
+TARGET=interpreter
 
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 MKFILE_DIR := $(dir $(MKFILE_PATH))
