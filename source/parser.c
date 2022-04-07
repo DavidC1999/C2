@@ -26,10 +26,11 @@ void parser_expect_token_type(Token* token, int expected_type) {
 void parser_expect_keyword(Token* token, int expected_keyword) {
 	parser_expect_token_type(token, T_KEYWORD);
 
-	if(*(int*)(token->data) != expected_keyword) {
+	if(token->number != expected_keyword) {
 		char buffer[100];
-		snprintf(buffer, 100, "Expected keyword of type %s, but found %s, instead", token_type_to_name[*(int*)token->data], token_type_to_name[expected_keyword]);
+		snprintf(buffer, 100, "Expected keyword of type %s, but found %s, instead", token_type_to_name[token->number], token_type_to_name[expected_keyword]);
 		panic(buffer, token->line);
+	
 	}
 }
 
@@ -37,9 +38,9 @@ ParseNode* parser_get_function_call(TokenLL* tokens) {
 	parser_expect_token_type(tokens->current, T_IDENTIFIER);
 	int line = tokens->current->line;
 
-	size_t name_len = strlen(tokens->current->data);
+	size_t name_len = strlen(tokens->current->name);
 	char* name = (char*)malloc(sizeof(char) * (name_len + 1));
-	strncpy(name, tokens->current->data, name_len + 1);
+	strncpy(name, tokens->current->name, name_len + 1);
 	parser_advance_token(tokens);
 
 	parser_expect_token_type(tokens->current, T_LPAREN);
@@ -47,7 +48,7 @@ ParseNode* parser_get_function_call(TokenLL* tokens) {
 
 	parser_expect_token_type(tokens->current, T_NUMBER);
 	int* param = (int*)malloc(sizeof(int));
-	*param = *(int*)tokens->current->data;
+	*param = tokens->current->number;
 
 	parser_advance_token(tokens);
 
@@ -84,9 +85,9 @@ ParseNode* parser_get_function_definition(TokenLL* tokens) {
 	parser_advance_token(tokens);
 	
 	parser_expect_token_type(tokens->current, T_IDENTIFIER);
-	size_t identifier_len = strlen(tokens->current->data);
+	size_t identifier_len = strlen(tokens->current->name);
 	char* identifier_name = (char*)malloc(sizeof(char) * (identifier_len + 1));
-	strncpy(identifier_name, tokens->current->data, identifier_len);
+	strncpy(identifier_name, tokens->current->name, identifier_len);
 	identifier_name[identifier_len] = '\0';
 	parser_advance_token(tokens);
 
@@ -137,7 +138,7 @@ ParseNode* parse(TokenLL* tokens) {
 	int functions_counter = 0;
 	while(tokens->current != NULL &&
 			tokens->current->type == T_KEYWORD &&
-			*(int*)tokens->current->data == K_FUNC) {
+			tokens->current->number == K_FUNC) {
 		functions[functions_counter++] = parser_get_function_definition(tokens);
 	}
 

@@ -29,8 +29,16 @@ void append_token(TokenLL* tokens, int new_type, void* data) {
 	Token* new_token = (Token*)malloc(sizeof(Token));
 	new_token->type = new_type;
 	new_token->next = NULL;
-	new_token->data = data;
 	new_token->line = _curr_line;
+	switch(new_type) {
+		case T_NUMBER:
+		case T_KEYWORD:
+			new_token->number = *(int*)data;
+			break;
+		case T_IDENTIFIER:
+			new_token->name = (char*)data;
+			break;
+	}
 	
 	tokens->tail->next = new_token;
 	tokens->tail = new_token;
@@ -39,7 +47,9 @@ void append_token(TokenLL* tokens, int new_type, void* data) {
 void free_token(Token* node) {
 	if(node == NULL) return;
 	free_token(node->next);
-	free(node->data);
+	if(node->type == T_IDENTIFIER) {
+		free(node->name);
+	}
 	free(node);
 }
 
@@ -53,10 +63,9 @@ void tokenizer_create_number(char** text, TokenLL* tokens) {
 	}
 	buffer[buffer_i] = '\0';
 
-	int* data = (int*)malloc(sizeof(int));
-	*data = atoi(buffer);
+	int result = atoi(buffer);
 
-	append_token(tokens, T_NUMBER, data);
+	append_token(tokens, T_NUMBER, &result);
 }
 
 void tokenizer_create_identifier(char** text, TokenLL* tokens) {
@@ -76,15 +85,13 @@ void tokenizer_create_identifier(char** text, TokenLL* tokens) {
 	append_token(tokens, T_IDENTIFIER, data);
 }
 
-void tokenizer_check_identifier_is_keyword(Token* node) {
-	if(node->type != T_IDENTIFIER) return;
+void tokenizer_check_identifier_is_keyword(Token* token) {
+	if(token->type != T_IDENTIFIER) return;
 	
-	if(strcmp(node->data, "func") == 0) {
-		node->type = T_KEYWORD;
-		free(node->data);
-		int* new_data = (int*)malloc(sizeof(int));
-		*new_data = K_FUNC;
-		node->data = new_data;
+	if(strcmp(token->name, "func") == 0) {
+		free(token->name);
+		token->type = T_KEYWORD;
+		token->number = K_FUNC;
 	}
 }
 
@@ -156,13 +163,13 @@ void print_tokens(Token* node) {
 			printf("HEAD -> ");
 			break;
 		case T_IDENTIFIER:
-			printf("IDENTIFIER: %s -> ", (char*)node->data);
+			printf("IDENTIFIER: %s -> ", node->name);
 			break;
 		case T_KEYWORD:
-			printf("KEYWORD: %s -> ", keyword_type_to_name[*(int*)node->data]);
+			printf("KEYWORD: %s -> ", keyword_type_to_name[node->number]);
 			break;
 		case T_NUMBER:
-			printf("NUMBER: %d -> ", *(int*)node->data);
+			printf("NUMBER: %d -> ", node->number);
 			break;
 		case T_LPAREN:
 			printf("'(' -> ");

@@ -6,7 +6,7 @@
 #define MAX_STATEMENTS_PER_FUNC 1000
 
 enum ParseNodeTypes {
-	N_ROOT, // ParseNode*[] function_definitions
+	N_ROOT, // int* count, ParseNode*[] function_definitions
 	N_FUNC_DEF, // char* name, int* count, ParseNode* statements
 	N_STATEMENT, // ParseNode* function_call
 	N_FUNC_CALL // char* name, int* param

@@ -6,8 +6,11 @@
 typedef struct Token {
 	int type;
 	struct Token* next;
-	void* data;
 	int line;
+	union {
+		char* name; // for identifier
+		int number; // for number or keyword
+	};
 } Token;
 
 typedef struct TokenLL {
