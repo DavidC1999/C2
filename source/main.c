@@ -44,23 +44,23 @@ int main(int argc, char** argv) {
 	TokenLL* tokens;
 
 	tokenize(buffer, &tokens);
+
+	free(buffer);
 	
 	print_tokens(tokens->head);
 
 	// Parsing tokens:
 	ParseNode* tree = parse(tokens);
 
+	free_token(tokens->head);
+
 	parser_print_tree(tree, 0);
 
 	// Interpreting:
+	printf("Program output:\n");
 	interpret(tree);
 
-	// Cleanup:
 	free_AST(tree);
-
-	free_token(tokens->head);
-
-	free(buffer);
 
 	return 0;
 }

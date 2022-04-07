@@ -46,10 +46,11 @@ ParseNode* parser_get_function_call(TokenLL* tokens) {
 	parser_expect_token_type(tokens->current, T_LPAREN);
 	parser_advance_token(tokens);
 
-	parser_expect_token_type(tokens->current, T_NUMBER);
-	int param = tokens->current->number;
-
-	parser_advance_token(tokens);
+	int param = 0;
+	if(tokens->current->type == T_NUMBER) {
+		param = tokens->current->number;
+		parser_advance_token(tokens);
+	}
 
 	parser_expect_token_type(tokens->current, T_RPAREN);
 	parser_advance_token(tokens);
