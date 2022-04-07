@@ -12,11 +12,42 @@ enum ParseNodeTypes {
 	N_FUNC_CALL // char* name, int* param
 };
 
-typedef struct ParseNode {
+typedef struct ParseNode ParseNode;
+
+typedef struct RootNode {
+	// N_ROOT:
+	int count;
+	struct ParseNode* function_definitions;
+} RootNode;
+
+typedef struct FuncDefNode {
+	// N_FUNC_DEF:
+	char* name;
+	int statement_amt;
+	struct ParseNode* statements;
+} FuncDefNode;
+
+typedef struct StatementNode {
+	// N_STATEMENT:
+	struct ParseNode* function_call;
+} StatementNode;
+
+typedef struct FuncCallNode {
+	// N_FUNCTION_CALL:
+	char* name;
+	int param;
+} FuncCallNode;
+
+struct ParseNode {
 	int type;
 	int line;
-	void* data; // TODO: use unions instead of void*. This is madness.
-} ParseNode;
+	union {
+		RootNode root_params;
+		FuncDefNode func_def_params;
+		StatementNode statement_params;
+		FuncCallNode func_call_params;
+	};
+};
 
 ParseNode* parse(TokenLL* tokens);
 void parser_print_tree(ParseNode* node, int indent);

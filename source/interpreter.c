@@ -110,27 +110,23 @@ static bool call_func(char* name, int param) {
 
 static void visit_node(ParseNode* node) {
 	switch(node->type) {
-		case N_ROOT: {
-			visit_node(node->data);
-			break;
-		}
 		case N_FUNC_DEF: {
-			char* name = ((char**)node->data)[0];
-			int statement_amt = *(((int**)node->data)[1]);
+			char* name = node->func_def_params.name;
+			int statement_amt = node->func_def_params.statement_amt;
 
-			ParseNode* statements = ((ParseNode**)node->data)[2];
+			ParseNode* statements = node->func_def_params.statements;
 
 			define_func(name, node->line, statement_amt, statements);
 			break;
 		}
 		case N_STATEMENT: {
-			ParseNode* func_call = ((ParseNode**)node->data)[0];
+			ParseNode* func_call = node->statement_params.function_call;
 			visit_node(func_call);
 			break;
 		}
 		case N_FUNC_CALL: {
-			char* name = ((char**)node->data)[0];
-			int param = *(((int**)node->data)[1]);
+			char* name = node->func_call_params.name;
+			int param = node->func_call_params.param;
 			bool success = call_func(name, param);
 			if(!success) {
 				char buffer[100];
@@ -151,9 +147,9 @@ void interpret(ParseNode* node) {
 		panic(buffer, 0);
 	}
 	
-	int function_amt = *((int**)node->data)[0];
+	int function_amt = node->root_params.count;
 	for(int i = 0; i < function_amt; ++i) {
-		ParseNode* funcs = ((ParseNode**)node->data)[1];
+		ParseNode* funcs = node->root_params.function_definitions;
 		visit_node(&funcs[i]);
 	}
 

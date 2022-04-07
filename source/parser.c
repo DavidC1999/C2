@@ -47,8 +47,7 @@ ParseNode* parser_get_function_call(TokenLL* tokens) {
 	parser_advance_token(tokens);
 
 	parser_expect_token_type(tokens->current, T_NUMBER);
-	int* param = (int*)malloc(sizeof(int));
-	*param = tokens->current->number;
+	int param = tokens->current->number;
 
 	parser_advance_token(tokens);
 
@@ -58,9 +57,8 @@ ParseNode* parser_get_function_call(TokenLL* tokens) {
 	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
 	result->type = N_FUNC_CALL;
 	result->line = line;
-	result->data = malloc(sizeof(void*) * 2);
-	((char**)(result->data))[0] = name;
-	((int**)(result->data))[1] = param;
+	result->func_call_params.name = name;
+	result->func_call_params.param = param;
 
 	return result;
 }
@@ -73,8 +71,7 @@ ParseNode* parser_get_statement(TokenLL* tokens) {
 	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
 	result->type = N_STATEMENT;
 	result->line = func_call->line;
-	result->data = malloc(sizeof(void*));
-	((ParseNode**)result->data)[0] = func_call;
+	result->statement_params.function_call = func_call;
 
 	return result;
 }
@@ -114,18 +111,14 @@ ParseNode* parser_get_function_definition(TokenLL* tokens) {
 	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
 	result->type = N_FUNC_DEF;
 	result->line = line;
-	// TODO: I do not think this is the correct size calculation:
-	result->data = malloc(sizeof(void*) * (2 + statement_counter));
-	((char**)result->data)[0] = identifier_name;
-	
-	((int**)(result->data))[1] = (int*)malloc(sizeof(int));
-	*(((int**)result->data)[1]) = statement_counter;
+	result->func_def_params.name = identifier_name;
+	result->func_def_params.statement_amt = statement_counter;
+	result->func_def_params.statements = (ParseNode*)malloc(sizeof(ParseNode) * statement_counter);
 
-	((ParseNode**)result->data)[2] = (ParseNode*)malloc(sizeof(ParseNode) * statement_counter);
 	for(int i = 0; i < statement_counter; ++i) {
-		((ParseNode**)result->data)[2][i].type = statements[i]->type;
-		((ParseNode**)result->data)[2][i].line = statements[i]->line;
-		((ParseNode**)result->data)[2][i].data = statements[i]->data;
+		result->func_def_params.statements[i].type = statements[i]->type;
+		result->func_def_params.statements[i].line = statements[i]->line;
+		result->func_def_params.statements[i].statement_params.function_call = statements[i]->statement_params.function_call;
 		free(statements[i]);
 	}
 
@@ -151,16 +144,15 @@ ParseNode* parse(TokenLL* tokens) {
 	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
 	result->type = N_ROOT;
 	result->line = 0;
-	result->data = malloc(sizeof(void*) * 2);
-	// result->data = (ParseNode*)malloc(sizeof(ParseNode) * functions_counter);
-	((int**)result->data)[0] = (int*)malloc(sizeof(int));
-	*(((int**)result->data)[0]) = functions_counter;
-	((ParseNode**)result->data)[1] = (ParseNode*)malloc(sizeof(ParseNode) * functions_counter);
+	result->root_params.count = functions_counter;
+	result->root_params.function_definitions = (ParseNode*)malloc(sizeof(ParseNode) * functions_counter);
 
 	for(int i = 0; i < functions_counter; ++i) {
-		((ParseNode**)result->data)[1][i].type = functions[i]->type;
-		((ParseNode**)result->data)[1][i].line = functions[i]->line;
-		((ParseNode**)result->data)[1][i].data = functions[i]->data;
+		result->root_params.function_definitions[i].type = functions[i]->type;
+		result->root_params.function_definitions[i].line = functions[i]->line;
+		result->root_params.function_definitions[i].func_def_params.name = functions[i]->func_def_params.name;
+		result->root_params.function_definitions[i].func_def_params.statement_amt = functions[i]->func_def_params.statement_amt;
+		result->root_params.function_definitions[i].func_def_params.statements = functions[i]->func_def_params.statements;
 		free(functions[i]);
 	}
 
@@ -168,32 +160,27 @@ ParseNode* parse(TokenLL* tokens) {
 }
 
 void free_AST(ParseNode* node) {
-	if(node->data != NULL) { 
-		switch(node->type) {
-			case N_ROOT:
-				fprintf(stderr, "Freeing root node is not properly implemented\n");
-				exit(1);
-				free_AST(node->data);
-				break;
-			case N_FUNC_DEF:
-				int statment_amt = *(((int**)(node->data))[1]);
-				free(((char**)(node->data))[0]);
+	switch(node->type) {
+		case N_ROOT:
+			free(node->root_params.function_definitions);
+			break;
+		case N_FUNC_DEF:
+			int statment_amt = node->func_def_params.statement_amt;
+			free(node->func_def_params.name);
 
-				for(int i = 0; i < statment_amt; ++i) {
-					ParseNode* to_free = ((ParseNode**)node->data)[2][i].data;
-					free_AST(to_free);
-				}
-				free(((ParseNode**)node->data)[2]);
+			for(int i = 0; i < statment_amt; ++i) {
+				ParseNode* to_free = node->func_def_params.statements[i].statement_params.function_call;
+				free_AST(to_free);
+			}
+			free(node->func_def_params.statements);
 
-				break;
-			case N_STATEMENT:
-				free_AST(((ParseNode**)(node->data))[0]);
-				break;
-			case N_FUNC_CALL:
-				free(((char**)(node->data))[0]);
-				free(((int**)(node->data))[1]);
-				break;
-		}
+			break;
+		case N_STATEMENT:
+			free_AST(node->statement_params.function_call);
+			break;
+		case N_FUNC_CALL:
+			free(node->func_call_params.name);
+			break;
 	}
 	free(node);
 }
@@ -210,12 +197,12 @@ void parser_print_tree(ParseNode* node, int indent) {
 			parser_print_indent(indent);
 			printf("[\n");
 
-			int function_amt = *((int**)node->data)[0];
+			int function_amt = node->root_params.count;
 			
 			for(int i = 0; i < function_amt; ++i) {
 				parser_print_indent(indent + 1);
 				printf("Function definition: {\n");
-				ParseNode* funcs = ((ParseNode**)node->data)[1];
+				ParseNode* funcs = node->root_params.function_definitions;
 				parser_print_tree(&funcs[i], indent + 2);
 				parser_print_indent(indent + 1);
 				printf("}\n");
@@ -227,12 +214,12 @@ void parser_print_tree(ParseNode* node, int indent) {
 		}
 		case N_FUNC_DEF: {
 			parser_print_indent(indent);
-			printf("Name: %s\n", ((char**)(node->data))[0]);
+			printf("Name: %s\n", node->func_def_params.name);
 			parser_print_indent(indent);
 			printf("Statements: [\n");
-			int statement_amt = *(((int**)(node->data))[1]);
+			int statement_amt = node->func_def_params.statement_amt;
 			for(int i = 0; i < statement_amt; ++i) {
-				parser_print_tree(((ParseNode**)node->data)[2] + i, indent + 1);
+				parser_print_tree(&node->func_def_params.statements[i], indent + 1);
 			}
 			parser_print_indent(indent);
 			printf("]\n");
@@ -241,16 +228,16 @@ void parser_print_tree(ParseNode* node, int indent) {
 		case N_STATEMENT: {
 			parser_print_indent(indent);
 			printf("Function call: {\n");
-			parser_print_tree(((ParseNode**)(node->data))[0], indent + 1);
+			parser_print_tree(node->statement_params.function_call, indent + 1);
 			parser_print_indent(indent);
 			printf("}\n");
 			break;
 		}
 		case N_FUNC_CALL: {
 			parser_print_indent(indent);
-			printf("Identifier: %s\n", ((char**)(node->data))[0]);
+			printf("Identifier: %s\n", node->func_call_params.name);
 			parser_print_indent(indent);
-			printf("Param: %d\n", *(((int**)(node->data))[1]));
+			printf("Param: %d\n", node->func_call_params.param);
 			break;
 		}
 	}
