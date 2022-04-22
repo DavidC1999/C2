@@ -45,19 +45,13 @@ static void init_funcs() {
 	hashtable_set(builtin_functions, "putc", builtin_putc);
 
 	user_functions = hashtable_new(ANY_T, MAX_USER_FUNCTIONS);
-	// for(int i = 0; i < MAX_USER_FUNCTIONS; ++i) {
-	// 	user_functions[i].taken = false;
-	// }
-	 
-	// strncpy(builtin_functions[0].name, "print", MAX_FUNCTION_NAME_LEN);
-	// builtin_functions[0].func = builtin_print;
-	// 
-	// strncpy(builtin_functions[1].name, "putc", MAX_FUNCTION_NAME_LEN);
-	// builtin_functions[1].func = builtin_putc;
+
+	// we malloc our own user functions to put in the hashtable
+	// make sure they get freed when the hashtable is freed
+	hashtable_force_free_values(user_functions);
 }
 
 static void define_func(char* name, int line, int statement_amt, ParseNode* statements) {
-	printf("Defining function \"%s\"\n", name);
 	UserFunc* new_func = malloc(sizeof(UserFunc));
 	new_func->statement_amt = statement_amt;
 	new_func->statements = statements;
@@ -139,4 +133,5 @@ void interpret(ParseNode* node) {
 	}
 
 	hashtable_free(builtin_functions);
+	hashtable_free(user_functions);
 }
