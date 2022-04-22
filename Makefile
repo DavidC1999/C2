@@ -1,6 +1,6 @@
 CFLAGS=-W -Wall -Wextra -Werror -std=c11
 MAKE_ARGS=
-LIBS=c-hashtable/hashtable.a
+LIBS=hashtable/hashtable.a
 TARGET=interpreter
 
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))

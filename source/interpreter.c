@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "parser.h"
-#include "c-hashtable/hashtable.h"
+#include "hashtable/hashtable.h"
 
 #define MAX_USER_FUNCTIONS 100
 #define MAX_BUILTIN_FUNCTIONS 100
