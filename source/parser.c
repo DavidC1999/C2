@@ -34,47 +34,76 @@ void parser_expect_keyword(Token* token, int expected_keyword) {
 	}
 }
 
-ParseNode* parser_get_function_call(TokenLL* tokens) {
+ParseNode* parser_get_statement(TokenLL* tokens) {
 	parser_expect_token_type(tokens->current, T_IDENTIFIER);
+
 	int line = tokens->current->line;
 
-	size_t name_len = strlen(tokens->current->name);
-	char* name = (char*)malloc(sizeof(char) * (name_len + 1));
-	strncpy(name, tokens->current->name, name_len + 1);
+	size_t identifier_len = strlen(tokens->current->name) + 1; // includes '\0'
+	char* identifier = malloc(sizeof(char) * (identifier_len));
+	strncpy(identifier, tokens->current->name , identifier_len);
+
 	parser_advance_token(tokens);
 
-	parser_expect_token_type(tokens->current, T_LPAREN);
-	parser_advance_token(tokens);
+	switch(tokens->current->type) {
+		case T_LPAREN: {
+			parser_advance_token(tokens);
 
-	int param = 0;
-	if(tokens->current->type == T_NUMBER) {
-		param = tokens->current->number;
-		parser_advance_token(tokens);
+			bool param_is_var = false;
+
+			int param = 0;
+			if(tokens->current->type == T_NUMBER) {
+				param = tokens->current->number;
+				parser_advance_token(tokens);
+			}
+
+			char* var_name;
+			if(tokens->current->type == T_IDENTIFIER) {
+				param_is_var = true;
+				var_name = tokens->current->name;
+				parser_advance_token(tokens);
+			}
+
+			parser_expect_token_type(tokens->current, T_RPAREN);
+			parser_advance_token(tokens);
+
+			ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
+			result->type = N_FUNC_CALL;
+			result->line = line;
+			result->func_call_params.name = identifier;
+			result->func_call_params.param_is_var = param_is_var;
+			if(param_is_var) {
+				size_t str_len = strlen(var_name) + 1; // including '\0'
+				result->func_call_params.var_name = malloc(sizeof(char) * str_len);
+				strncpy(result->func_call_params.var_name, var_name, str_len);
+			} else {
+				result->func_call_params.param = param;
+			}
+
+			parser_expect_token_type(tokens->current, T_SEMICOLON);
+			parser_advance_token(tokens);
+
+			return result;
+		}
+		case T_EQUAL: {
+			parser_advance_token(tokens);
+			parser_expect_token_type(tokens->current, T_NUMBER);
+			ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
+			result->type = N_VAR_ASSIGN;
+			result->line = line;
+			result->assign_params.name = identifier;
+			result->assign_params.value = tokens->current->number;
+			parser_advance_token(tokens);
+			
+			parser_expect_token_type(tokens->current, T_SEMICOLON);
+			parser_advance_token(tokens);
+
+			return result;
+		}
 	}
-
-	parser_expect_token_type(tokens->current, T_RPAREN);
-	parser_advance_token(tokens);
-
-	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
-	result->type = N_FUNC_CALL;
-	result->line = line;
-	result->func_call_params.name = name;
-	result->func_call_params.param = param;
-
-	return result;
-}
-
-ParseNode* parser_get_statement(TokenLL* tokens) {
-	ParseNode* func_call = parser_get_function_call(tokens);
-	parser_expect_token_type(tokens->current, T_SEMICOLON);
-	parser_advance_token(tokens);
-
-	ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
-	result->type = N_STATEMENT;
-	result->line = func_call->line;
-	result->statement_params.function_call = func_call;
-
-	return result;
+	panic("invalid statement", line);
+	
+	return NULL;
 }
 
 ParseNode* parser_get_function_definition(TokenLL* tokens) {
@@ -97,6 +126,7 @@ ParseNode* parser_get_function_definition(TokenLL* tokens) {
 	parser_advance_token(tokens);
 
 	ParseNode* statements[MAX_STATEMENTS_PER_FUNC];
+
 	int statement_counter = 0;
 	while(tokens->current->type == T_IDENTIFIER) {
 		if(statement_counter >= MAX_STATEMENTS_PER_FUNC) {
@@ -114,13 +144,11 @@ ParseNode* parser_get_function_definition(TokenLL* tokens) {
 	result->line = line;
 	result->func_def_params.name = identifier_name;
 	result->func_def_params.statement_amt = statement_counter;
-	result->func_def_params.statements = (ParseNode*)malloc(sizeof(ParseNode) * statement_counter);
+	result->func_def_params.statements = malloc(sizeof(ParseNode*) * statement_counter);
+
 
 	for(int i = 0; i < statement_counter; ++i) {
-		result->func_def_params.statements[i].type = statements[i]->type;
-		result->func_def_params.statements[i].line = statements[i]->line;
-		result->func_def_params.statements[i].statement_params.function_call = statements[i]->statement_params.function_call;
-		free(statements[i]);
+		result->func_def_params.statements[i] = statements[i];
 	}
 
 	return result;
@@ -195,24 +223,27 @@ void free_AST(ParseNode* node) {
 			free(node->root_params.definitions);
 			break;
 		case N_FUNC_DEF:
-			int statment_amt = node->func_def_params.statement_amt;
 			free(node->func_def_params.name);
 
-			for(int i = 0; i < statment_amt; ++i) {
-				ParseNode* to_free = node->func_def_params.statements[i].statement_params.function_call;
-				free_AST(to_free);
+			for(int i = 0; i < node->func_def_params.statement_amt; ++i) {
+				free(node->func_def_params.statements[i]);
 			}
+
 			free(node->func_def_params.statements);
 
 			break;
 		case N_VAR_DEF:
 			free(node->var_def_params.name);
 			break;
-		case N_STATEMENT:
-			free_AST(node->statement_params.function_call);
-			break;
 		case N_FUNC_CALL:
+			if(node->func_call_params.param_is_var) {
+				free(node->func_call_params.var_name);
+			}
+
 			free(node->func_call_params.name);
+			break;
+		case N_VAR_ASSIGN:
+			free(node->assign_params.name);
 			break;
 	}
 	free(node);
@@ -255,7 +286,7 @@ void parser_print_AST(ParseNode* node, int indent) {
 			printf("Statements: [\n");
 			int statement_amt = node->func_def_params.statement_amt;
 			for(int i = 0; i < statement_amt; ++i) {
-				parser_print_AST(&node->func_def_params.statements[i], indent + 1);
+				parser_print_AST(node->func_def_params.statements[i], indent + 1);
 			}
 			print_indent(indent);
 			printf("]\n");
@@ -266,19 +297,33 @@ void parser_print_AST(ParseNode* node, int indent) {
 			printf("Identifier: %s\n", node->var_def_params.name);
 			break;
 		}
-		case N_STATEMENT: {
+		case N_FUNC_CALL: {
 			print_indent(indent);
 			printf("Function call: {\n");
-			parser_print_AST(node->statement_params.function_call, indent + 1);
+
+			print_indent(indent + 1);
+			printf("Identifier: %s\n", node->func_call_params.name);
+			print_indent(indent + 1);
+			if(node->func_call_params.param_is_var)
+				printf("Param: %s\n", node->func_call_params.var_name);
+			else
+				printf("Param: %d\n", node->func_call_params.param);
+
 			print_indent(indent);
 			printf("}\n");
 			break;
 		}
-		case N_FUNC_CALL: {
+		case N_VAR_ASSIGN: {
 			print_indent(indent);
-			printf("Identifier: %s\n", node->func_call_params.name);
+			printf("Variable assignment: {\n");
+
+			print_indent(indent + 1);
+			printf("Identifier: %s\n", node->assign_params.name);
+			print_indent(indent + 1);
+			printf("Value: %d\n", node->assign_params.value);
+
 			print_indent(indent);
-			printf("Param: %d\n", node->func_call_params.param);
+			printf("}\n");
 			break;
 		}
 	}

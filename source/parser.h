@@ -3,14 +3,16 @@
 
 #include "tokenizer.h"
 
+#include <stdbool.h>
+
 #define MAX_STATEMENTS_PER_FUNC 1000
 
 enum ParseNodeTypes {
 	N_ROOT,
 	N_FUNC_DEF,
 	N_VAR_DEF,
-	N_STATEMENT,
-	N_FUNC_CALL
+	N_FUNC_CALL,
+	N_VAR_ASSIGN
 };
 
 typedef struct ParseNode ParseNode;
@@ -23,21 +25,26 @@ typedef struct RootNode {
 typedef struct FuncDefNode {
 	char* name;
 	int statement_amt;
-	struct ParseNode* statements;
+	struct ParseNode** statements;
 } FuncDefNode;
 
 typedef struct VarDefNode {
 	char* name;
 } VarDefNode;
 
-typedef struct StatementNode {
-	struct ParseNode* function_call;
-} StatementNode;
-
 typedef struct FuncCallNode {
 	char* name;
-	int param;
+	bool param_is_var;
+	union {
+		int param;
+		char* var_name;
+	};
 } FuncCallNode;
+
+typedef struct AssignNode {
+	char* name;
+	int value;
+} AssignNode;
 
 struct ParseNode {
 	int type;
@@ -46,7 +53,7 @@ struct ParseNode {
 		RootNode root_params;
 		FuncDefNode func_def_params;
 		VarDefNode var_def_params;
-		StatementNode statement_params;
+		AssignNode assign_params;
 		FuncCallNode func_call_params;
 	};
 };

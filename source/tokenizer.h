@@ -28,7 +28,8 @@ enum TokenTypes {
 	T_RPAREN,
 	T_LBRACE,
 	T_RBRACE,
-	T_SEMICOLON
+	T_SEMICOLON,
+	T_EQUAL,
 };
 
 extern char* token_type_to_name[];

@@ -23,7 +23,7 @@ void builtin_putc(int param) {
 
 typedef struct UserFunc {
 	int statement_amt;
-	ParseNode* statements;
+	ParseNode** statements;
 } UserFunc;
 
 static HashTable* user_functions;
@@ -54,7 +54,7 @@ static void init_funcs() {
 	hashtable_force_free_values(user_functions);
 }
 
-static void define_func(char* name, int line, int statement_amt, ParseNode* statements) {
+static void define_func(char* name, int line, int statement_amt, ParseNode** statements) {
 	UserFunc* new_func = malloc(sizeof(UserFunc));
 	new_func->statement_amt = statement_amt;
 	new_func->statements = statements;
@@ -71,7 +71,7 @@ static bool call_func(char* name, int param) {
 	if(hashtable_get(user_functions, &buffer, name)) {
 		UserFunc* user_func = buffer.value;
 		for(int i = 0; i < user_func->statement_amt; ++i) {
-			visit_node(&user_func->statements[i]);
+			visit_node(user_func->statements[i]);
 		}
 
 		return true;
@@ -92,7 +92,7 @@ static void visit_node(ParseNode* node) {
 			char* name = node->func_def_params.name;
 			int statement_amt = node->func_def_params.statement_amt;
 
-			ParseNode* statements = node->func_def_params.statements;
+			ParseNode** statements = node->func_def_params.statements;
 
 			define_func(name, node->line, statement_amt, statements);
 			break;
@@ -101,14 +101,20 @@ static void visit_node(ParseNode* node) {
 			hashtable_set_int(variables, node->var_def_params.name, 0);
 			break;
 		}
-		case N_STATEMENT: {
-			ParseNode* func_call = node->statement_params.function_call;
-			visit_node(func_call);
-			break;
-		}
 		case N_FUNC_CALL: {
 			char* name = node->func_call_params.name;
-			int param = node->func_call_params.param;
+			int param;
+			
+			if(node->func_call_params.param_is_var) {
+				if(!hashtable_get_int(variables, &param, node->func_call_params.var_name)) {
+					char buffer[100];
+					snprintf(buffer, 100, "Unknown variable: %s", node->func_call_params.var_name);
+					panic(buffer, node->line);
+				}
+			} else {
+				param = node->func_call_params.param;
+			}
+			
 			bool success = call_func(name, param);
 			if(!success) {
 				char buffer[100];
@@ -116,6 +122,13 @@ static void visit_node(ParseNode* node) {
 				panic(buffer, node->line);
 			}
 			break;
+		}
+		case N_VAR_ASSIGN: {
+			hashtable_set_int(variables, node->assign_params.name, node->assign_params.value);
+			break;
+		}
+		default: {
+			panic("Unknown node type", node->line);
 		}
 	}
 }
@@ -140,6 +153,15 @@ void interpret(ParseNode* node) {
 	if(!success) {
 		panic("Every program should have a main function", 0);
 	}
+
+#ifdef DEBUG
+	char* var_name;
+	int var_val;
+	printf("Variables:\n");
+	while(hashtable_get_next_int(variables, &var_name, &var_val)) {
+		printf("%s: %d\n", var_name, var_val);
+	}
+#endif
 
 	hashtable_free(builtin_functions);
 	hashtable_free(user_functions);

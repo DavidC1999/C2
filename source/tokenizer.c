@@ -19,6 +19,7 @@ char* token_type_to_name[] = {
 	"T_LBRACE",
 	"T_RBRACE",
 	"T_SEMICOLON",
+	"T_EQUAL"
 };
 
 char* keyword_type_to_name[] = {
@@ -143,6 +144,9 @@ void tokenize(char* text, TokenLL** result) {
 		} else if(*text == ';') {
 			append_token(*result, T_SEMICOLON, NULL);
 			++text;
+		} else if(*text == '=') {
+			append_token(*result, T_EQUAL, NULL);
+			++text;
 		} else if (tokenizer_should_skip(*text)) {
 			if(*text == '\n') ++_curr_line;
 			++text;
@@ -190,6 +194,9 @@ void print_tokens(Token* node) {
 			break;
 		case T_SEMICOLON:
 			printf("';' -> ");
+			break;
+		case T_EQUAL:
+			printf("'=' -> ");
 			break;
 	}
 	print_tokens(node->next);

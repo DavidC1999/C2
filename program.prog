@@ -1,10 +1,13 @@
-var myLetter;
+var theLetterD;
+var newLine;
 
 func printD() {
-	putc(68);
-	putc(10);
+	putc(theLetterD);
+	putc(newLine);
 }
 
 func main() {
+	theLetterD = 68;
+	newLine = 10;
 	printD();
 }

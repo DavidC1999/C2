@@ -46,18 +46,24 @@ int main(int argc, char** argv) {
 	tokenize(buffer, &tokens);
 
 	free(buffer);
-	
+
+#ifdef DEBUG
 	print_tokens(tokens->head);
+#endif
 
 	// Parsing tokens:
 	ParseNode* tree = parse(tokens);
 
 	free_token(tokens->head);
 
+#ifdef DEBUG
 	parser_print_AST(tree, 0);
+#endif
 
 	// Interpreting:
+#ifdef DEBUG
 	printf("Program output:\n");
+#endif
 	interpret(tree);
 
 	free_AST(tree);
