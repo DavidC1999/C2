@@ -9,6 +9,7 @@
 #define MAX_USER_FUNCTIONS 100
 #define MAX_BUILTIN_FUNCTIONS 100
 #define MAX_FUNCTION_NAME_LEN 100
+#define MAX_VARIABLE_AMT 100
 
 static void visit_node(ParseNode* node);
 
@@ -33,6 +34,8 @@ typedef struct BuiltinFunc {
 } BuiltinFunc;
 
 static HashTable* builtin_functions;
+
+static HashTable* variables;
 
 static void panic(char* message, int line) {
 	fprintf(stderr, "Error while interpreting on line %d: %s\n", line, message);
@@ -94,6 +97,10 @@ static void visit_node(ParseNode* node) {
 			define_func(name, node->line, statement_amt, statements);
 			break;
 		}
+		case N_VAR_DEF: {
+			hashtable_set_int(variables, node->var_def_params.name, 0);
+			break;
+		}
 		case N_STATEMENT: {
 			ParseNode* func_call = node->statement_params.function_call;
 			visit_node(func_call);
@@ -114,6 +121,8 @@ static void visit_node(ParseNode* node) {
 }
 
 void interpret(ParseNode* node) {
+	variables = hashtable_new(INT_T, MAX_VARIABLE_AMT);
+
 	init_funcs();
 	if(node->type != N_ROOT) {
 		char buffer[100];
@@ -123,8 +132,8 @@ void interpret(ParseNode* node) {
 	
 	int function_amt = node->root_params.count;
 	for(int i = 0; i < function_amt; ++i) {
-		ParseNode* funcs = node->root_params.function_definitions;
-		visit_node(&funcs[i]);
+		ParseNode* definitions = node->root_params.definitions;
+		visit_node(&definitions[i]);
 	}
 
 	bool success = call_func("main", 0);
@@ -134,4 +143,5 @@ void interpret(ParseNode* node) {
 
 	hashtable_free(builtin_functions);
 	hashtable_free(user_functions);
+	hashtable_free(variables);
 }

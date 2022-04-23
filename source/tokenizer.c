@@ -18,11 +18,12 @@ char* token_type_to_name[] = {
 	"T_RPAREN",
 	"T_LBRACE",
 	"T_RBRACE",
-	"T_SEMICOLON"
+	"T_SEMICOLON",
 };
 
 char* keyword_type_to_name[] = {
-	"K_FUNC"
+	"K_FUNC",
+	"K_VAR",
 };
 
 void append_token(TokenLL* tokens, int new_type, void* data) {
@@ -92,6 +93,10 @@ void tokenizer_check_identifier_is_keyword(Token* token) {
 		free(token->name);
 		token->type = T_KEYWORD;
 		token->number = K_FUNC;
+	} else if(strcmp(token->name, "var") == 0) {
+		free(token->name);
+		token->type = T_KEYWORD;
+		token->number = K_VAR;
 	}
 }
 

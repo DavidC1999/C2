@@ -34,7 +34,8 @@ enum TokenTypes {
 extern char* token_type_to_name[];
 
 enum KeywordTypes {
-	K_FUNC
+	K_FUNC,
+	K_VAR
 };
 
 extern char* keyword_type_to_name[];

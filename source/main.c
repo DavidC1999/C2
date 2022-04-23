@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 
 	free_token(tokens->head);
 
-	parser_print_tree(tree, 0);
+	parser_print_AST(tree, 0);
 
 	// Interpreting:
 	printf("Program output:\n");

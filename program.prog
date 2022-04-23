@@ -1,3 +1,5 @@
+var myLetter;
+
 func printD() {
 	putc(68);
 	putc(10);
