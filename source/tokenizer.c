@@ -147,6 +147,18 @@ void tokenize(char* text, TokenLL** result) {
 		} else if(*text == '=') {
 			append_token(*result, T_EQUAL, NULL);
 			++text;
+		} else if(*text == '/') {
+			++text;
+			if(*text == EOF) break;
+			if(*text == '/') {
+				++text;
+				while(*text != '\n' && *text != EOF) {
+					++text;
+				}
+			} else {
+				fprintf(stderr, "Unexpected char: %c\n", *text);
+				exit(1);
+			}
 		} else if (tokenizer_should_skip(*text)) {
 			if(*text == '\n') ++_curr_line;
 			++text;

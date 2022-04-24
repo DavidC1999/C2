@@ -1,13 +1,12 @@
 var theLetterD;
-var newLine;
 
 func printD() {
 	putc(theLetterD);
-	putc(newLine);
+	putc(10);
 }
 
 func main() {
+	// 68 is the ASCII value for 'D'
 	theLetterD = 68;
-	newLine = 10;
 	printD();
 }
