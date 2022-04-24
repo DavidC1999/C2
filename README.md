@@ -22,7 +22,6 @@ func main() {
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] More error checking (segmentation faults all around)
 - [ ] Boolean expressions
 - [ ] If statements
 - [ ] Local variables

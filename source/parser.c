@@ -24,41 +24,41 @@ static void panic(char* message, int line) {
     exit(1);
 }
 
-static void expect_token_type(Token* token, int expected_type) {
-    if (token == NULL) {
+static void expect_token_type(TokenLL* tokens, int expected_type) {
+    if (tokens->current == NULL) {
         char buffer[100];
-        snprintf(buffer, 100, "Expected token type %s, but found null instead", token_type_to_name[expected_type]);
-        panic(buffer, token->line);
+        snprintf(buffer, 100, "Expected token type %s, but found end of tokens instead", token_type_to_name[expected_type]);
+        panic(buffer, tokens->tail->line);
     }
 
-    if (token->type != expected_type) {
+    if (tokens->current->type != expected_type) {
         char buffer[100];
-        snprintf(buffer, 100, "Expected token type %s, but found %s instead", token_type_to_name[expected_type], token_type_to_name[token->type]);
-        panic(buffer, token->line);
+        snprintf(buffer, 100, "Expected token type %s, but found %s instead", token_type_to_name[expected_type], token_type_to_name[tokens->current->type]);
+        panic(buffer, tokens->current->line);
     }
 }
 
-static void expect_keyword(Token* token, int expected_keyword) {
-    expect_token_type(token, T_KEYWORD);
+static void expect_keyword(TokenLL* tokens, int expected_keyword) {
+    expect_token_type(tokens, T_KEYWORD);
 
-    if (token->number != expected_keyword) {
+    if (tokens->current->number != expected_keyword) {
         char buffer[100];
-        snprintf(buffer, 100, "Expected keyword of type %s, but found %s, instead", token_type_to_name[token->number], token_type_to_name[expected_keyword]);
-        panic(buffer, token->line);
+        snprintf(buffer, 100, "Expected keyword of type %s, but found %s, instead", token_type_to_name[tokens->current->number], token_type_to_name[expected_keyword]);
+        panic(buffer, tokens->current->line);
     }
 }
 
 static ParseNode* get_expression(TokenLL* tokens);
 
 static ParseNode* get_function_call(TokenLL* tokens) {
-    expect_token_type(tokens->current, T_IDENTIFIER);
+    expect_token_type(tokens, T_IDENTIFIER);
     size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
     char* name = malloc(sizeof(char) * str_length);
     strncpy(name, tokens->current->name, str_length);
     int line = tokens->current->line;
     advance_token(tokens);
 
-    expect_token_type(tokens->current, T_LPAREN);
+    expect_token_type(tokens, T_LPAREN);
     advance_token(tokens);
 
     ParseNode* param;
@@ -72,7 +72,7 @@ static ParseNode* get_function_call(TokenLL* tokens) {
         param->num_params.value = 0;
     }
 
-    expect_token_type(tokens->current, T_RPAREN);
+    expect_token_type(tokens, T_RPAREN);
     advance_token(tokens);
 
     ParseNode* result = malloc(sizeof(ParseNode));
@@ -85,7 +85,9 @@ static ParseNode* get_function_call(TokenLL* tokens) {
 }
 
 static ParseNode* get_factor(TokenLL* tokens) {
-    if (tokens->current == NULL) panic("Expected factor, but end of file was found", tokens->tail->line);
+    if (tokens->current == NULL) {
+        panic("unexpected end of token stream", tokens->tail->line);
+    }
 
     switch (tokens->current->type) {
         case T_IDENTIFIER: {
@@ -116,7 +118,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
         case T_LPAREN: {
             advance_token(tokens);
             ParseNode* result = get_expression(tokens);
-            expect_token_type(tokens->current, T_RPAREN);
+            expect_token_type(tokens, T_RPAREN);
             advance_token(tokens);
             return result;
         }
@@ -128,6 +130,10 @@ static ParseNode* get_factor(TokenLL* tokens) {
              token_type_to_name[T_NUMBER],
              token_type_to_name[T_LPAREN],
              token_type_to_name[tokens->current->type]);
+
+    int line = tokens->current == NULL ? tokens->tail->line : tokens->current->line;
+
+    panic(buffer, line);
 
     return NULL;
 }
@@ -191,6 +197,10 @@ static ParseNode* get_expression(TokenLL* tokens) {
 }
 
 static ParseNode* get_statement(TokenLL* tokens) {
+    if (tokens->current == NULL) {
+        panic("unexpected end of token stream", tokens->tail->line);
+    }
+
     if (tokens->current->type == T_IDENTIFIER && tokens->current->next->type == T_EQUAL) {
         size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
@@ -210,41 +220,41 @@ static ParseNode* get_statement(TokenLL* tokens) {
         result->assign_params.name = name;
         result->assign_params.value = value;
 
-        expect_token_type(tokens->current, T_SEMICOLON);
+        expect_token_type(tokens, T_SEMICOLON);
         advance_token(tokens);
 
         return result;
     }
 
     ParseNode* result = get_expression(tokens);
-    expect_token_type(tokens->current, T_SEMICOLON);
+    expect_token_type(tokens, T_SEMICOLON);
     advance_token(tokens);
     return result;
 }
 
 static ParseNode* get_function_definition(TokenLL* tokens) {
-    expect_keyword(tokens->current, K_FUNC);
+    expect_keyword(tokens, K_FUNC);
     int line = tokens->current->line;
     advance_token(tokens);
 
-    expect_token_type(tokens->current, T_IDENTIFIER);
+    expect_token_type(tokens, T_IDENTIFIER);
     size_t identifier_len = strlen(tokens->current->name);
     char* identifier_name = (char*)malloc(sizeof(char) * (identifier_len + 1));
     strncpy(identifier_name, tokens->current->name, identifier_len);
     identifier_name[identifier_len] = '\0';
     advance_token(tokens);
 
-    expect_token_type(tokens->current, T_LPAREN);
+    expect_token_type(tokens, T_LPAREN);
     advance_token(tokens);
-    expect_token_type(tokens->current, T_RPAREN);
+    expect_token_type(tokens, T_RPAREN);
     advance_token(tokens);
-    expect_token_type(tokens->current, T_LBRACE);
+    expect_token_type(tokens, T_LBRACE);
     advance_token(tokens);
 
     ParseNode* statements[MAX_STATEMENTS_PER_FUNC];
 
     int statement_counter = 0;
-    while (tokens->current->type == T_IDENTIFIER) {
+    while (tokens->current != NULL && tokens->current->type == T_IDENTIFIER) {
         if (statement_counter >= MAX_STATEMENTS_PER_FUNC) {
             panic("Too many statements for one function", tokens->current->line);
         }
@@ -252,7 +262,7 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
         statements[statement_counter++] = get_statement(tokens);
     }
 
-    expect_token_type(tokens->current, T_RBRACE);
+    expect_token_type(tokens, T_RBRACE);
     advance_token(tokens);
 
     ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
@@ -270,18 +280,18 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
 }
 
 static ParseNode* get_variable_definition(TokenLL* tokens) {
-    expect_keyword(tokens->current, K_VAR);
+    expect_keyword(tokens, K_VAR);
     int line = tokens->current->line;
     advance_token(tokens);
 
-    expect_token_type(tokens->current, T_IDENTIFIER);
+    expect_token_type(tokens, T_IDENTIFIER);
     size_t identifier_len = strlen(tokens->current->name);
     char* identifier_name = (char*)malloc(sizeof(char) * (identifier_len + 1));
     strncpy(identifier_name, tokens->current->name, identifier_len);
     identifier_name[identifier_len] = '\0';
     advance_token(tokens);
 
-    expect_token_type(tokens->current, T_SEMICOLON);
+    expect_token_type(tokens, T_SEMICOLON);
     advance_token(tokens);
 
     ParseNode* result = malloc(sizeof(ParseNode));
@@ -333,6 +343,11 @@ ParseNode* parse(TokenLL* tokens) {
 }
 
 void free_AST(ParseNode* node) {
+    if (node == NULL) {
+        fprintf(stderr, "Error while freeing AST, node is NULL");
+        exit(1);
+    }
+
     switch (node->type) {
         case N_ROOT:
             free(node->root_params.definitions);
@@ -379,6 +394,11 @@ static void print_indent(int amt) {
 }
 
 void print_AST(ParseNode* node, int indent) {
+    if (node == NULL) {
+        fprintf(stderr, "Error printing freeing AST, node is NULL");
+        exit(1);
+    }
+
     switch (node->type) {
         case N_ROOT: {
             print_indent(indent);

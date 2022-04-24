@@ -219,6 +219,18 @@ void print_tokens(Token* node) {
         case T_EQUAL:
             printf("'=' -> ");
             break;
+        case T_PLUS:
+            printf("'+' -> ");
+            break;
+        case T_MINUS:
+            printf("'-' -> ");
+            break;
+        case T_SLASH:
+            printf("'/' -> ");
+            break;
+        case T_ASTERISK:
+            printf("'*' -> ");
+            break;
     }
     print_tokens(node->next);
 }
