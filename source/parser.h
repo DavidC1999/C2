@@ -12,8 +12,20 @@ enum ParseNodeTypes {
     N_FUNC_DEF,
     N_VAR_DEF,
     N_FUNC_CALL,
-    N_VAR_ASSIGN
+    N_VAR_ASSIGN,
+    N_BIN_OP,
+    N_NUMBER,
+    N_VARIABLE,
 };
+
+enum BinOpNodeType {
+    BINOP_ADD,
+    BINOP_SUB,
+    BINOP_MUL,
+    BINOP_DIV,
+};
+
+extern char* bin_op_node_type_to_string[];
 
 typedef struct ParseNode ParseNode;
 
@@ -34,20 +46,30 @@ typedef struct VarDefNode {
 
 typedef struct FuncCallNode {
     char* name;
-    bool param_is_var;
-    union {
-        int param;
-        char* var_name;
-    };
+    ParseNode* param;
 } FuncCallNode;
 
 typedef struct AssignNode {
     char* name;
-    int value;
+    ParseNode* value;
 } AssignNode;
 
+typedef struct BinOpNode {
+    enum BinOpNodeType type;
+    ParseNode* left;
+    ParseNode* right;
+} BinOpNode;
+
+typedef struct NumberNode {
+    int value;
+} NumberNode;
+
+typedef struct VariableNode {
+    char* name;
+} VariableNode;
+
 struct ParseNode {
-    int type;
+    enum ParseNodeTypes type;
     int line;
     union {
         RootNode root_params;
@@ -55,6 +77,9 @@ struct ParseNode {
         VarDefNode var_def_params;
         AssignNode assign_params;
         FuncCallNode func_call_params;
+        BinOpNode bin_op_params;
+        NumberNode num_params;
+        VariableNode var_params;
     };
 };
 

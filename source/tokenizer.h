@@ -30,6 +30,10 @@ enum TokenTypes {
     T_RBRACE,
     T_SEMICOLON,
     T_EQUAL,
+    T_PLUS,
+    T_MINUS,
+    T_ASTERISK,
+    T_SLASH
 };
 
 extern char* token_type_to_name[];

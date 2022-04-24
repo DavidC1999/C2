@@ -6,7 +6,15 @@
 
 #include "tokenizer.h"
 
-static void advance_token(TokenLL* tokens) {
+char* bin_op_node_type_to_string[] = {
+    "BINOP_ADD",
+    "BINOP_SUB",
+    "BINOP_MUL",
+    "BINOP_DIV",
+};
+
+static void
+advance_token(TokenLL* tokens) {
     if (tokens->current == NULL) return;
     tokens->current = tokens->current->next;
 }
@@ -17,6 +25,12 @@ static void panic(char* message, int line) {
 }
 
 static void expect_token_type(Token* token, int expected_type) {
+    if (token == NULL) {
+        char buffer[100];
+        snprintf(buffer, 100, "Expected token type %s, but found null instead", token_type_to_name[expected_type]);
+        panic(buffer, token->line);
+    }
+
     if (token->type != expected_type) {
         char buffer[100];
         snprintf(buffer, 100, "Expected token type %s, but found %s instead", token_type_to_name[expected_type], token_type_to_name[token->type]);
@@ -34,76 +48,178 @@ static void expect_keyword(Token* token, int expected_keyword) {
     }
 }
 
-static ParseNode* get_statement(TokenLL* tokens) {
+static ParseNode* get_expression(TokenLL* tokens);
+
+static ParseNode* get_function_call(TokenLL* tokens) {
     expect_token_type(tokens->current, T_IDENTIFIER);
-
+    size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
+    char* name = malloc(sizeof(char) * str_length);
+    strncpy(name, tokens->current->name, str_length);
     int line = tokens->current->line;
-
-    size_t identifier_len = strlen(tokens->current->name) + 1;  // includes '\0'
-    char* identifier = malloc(sizeof(char) * (identifier_len));
-    strncpy(identifier, tokens->current->name, identifier_len);
-
     advance_token(tokens);
 
+    expect_token_type(tokens->current, T_LPAREN);
+    advance_token(tokens);
+
+    ParseNode* param;
+    if (tokens->current->type != T_RPAREN) {
+        param = get_expression(tokens);
+    } else {
+        // implicitly pass 0:
+        param = malloc(sizeof(ParseNode));
+        param->type = N_NUMBER;
+        param->line = tokens->current->line;
+        param->num_params.value = 0;
+    }
+
+    expect_token_type(tokens->current, T_RPAREN);
+    advance_token(tokens);
+
+    ParseNode* result = malloc(sizeof(ParseNode));
+    result->type = N_FUNC_CALL;
+    result->line = line;
+    result->func_call_params.name = name;
+    result->func_call_params.param = param;
+
+    return result;
+}
+
+static ParseNode* get_factor(TokenLL* tokens) {
+    if (tokens->current == NULL) panic("Expected factor, but end of file was found", tokens->tail->line);
+
     switch (tokens->current->type) {
-        case T_LPAREN: {
+        case T_IDENTIFIER: {
+            if (tokens->current->next != NULL && tokens->current->next->type == T_LPAREN)
+                return get_function_call(tokens);
+
+            // it's not a function call so it must be a variable
+            size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
+            char* name = malloc(sizeof(char) * str_length);
+            strncpy(name, tokens->current->name, str_length);
+
+            ParseNode* result = malloc(sizeof(ParseNode*));
+            result->type = N_VARIABLE;
+            result->line = tokens->current->line;
+            result->var_params.name = name;
+
             advance_token(tokens);
-
-            bool param_is_var = false;
-
-            int param = 0;
-            if (tokens->current->type == T_NUMBER) {
-                param = tokens->current->number;
-                advance_token(tokens);
-            }
-
-            char* var_name;
-            if (tokens->current->type == T_IDENTIFIER) {
-                param_is_var = true;
-                var_name = tokens->current->name;
-                advance_token(tokens);
-            }
-
-            expect_token_type(tokens->current, T_RPAREN);
-            advance_token(tokens);
-
-            ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
-            result->type = N_FUNC_CALL;
-            result->line = line;
-            result->func_call_params.name = identifier;
-            result->func_call_params.param_is_var = param_is_var;
-            if (param_is_var) {
-                size_t str_len = strlen(var_name) + 1;  // including '\0'
-                result->func_call_params.var_name = malloc(sizeof(char) * str_len);
-                strncpy(result->func_call_params.var_name, var_name, str_len);
-            } else {
-                result->func_call_params.param = param;
-            }
-
-            expect_token_type(tokens->current, T_SEMICOLON);
-            advance_token(tokens);
-
             return result;
         }
-        case T_EQUAL: {
+        case T_NUMBER: {
+            ParseNode* result = malloc(sizeof(ParseNode));
+            result->type = N_NUMBER;
+            result->line = tokens->current->line;
+            result->num_params.value = tokens->current->number;
             advance_token(tokens);
-            expect_token_type(tokens->current, T_NUMBER);
-            ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
-            result->type = N_VAR_ASSIGN;
-            result->line = line;
-            result->assign_params.name = identifier;
-            result->assign_params.value = tokens->current->number;
+            return result;
+        }
+        case T_LPAREN: {
             advance_token(tokens);
-
-            expect_token_type(tokens->current, T_SEMICOLON);
+            ParseNode* result = get_expression(tokens);
+            expect_token_type(tokens->current, T_RPAREN);
             advance_token(tokens);
-
             return result;
         }
     }
-    panic("invalid statement", line);
+
+    char buffer[200];
+    snprintf(buffer, 200, "Expected token of type [%s, %s, %s] but found %s instead",
+             token_type_to_name[T_IDENTIFIER],
+             token_type_to_name[T_NUMBER],
+             token_type_to_name[T_LPAREN],
+             token_type_to_name[tokens->current->type]);
 
     return NULL;
+}
+
+static ParseNode* get_term(TokenLL* tokens) {
+    ParseNode* result = get_factor(tokens);
+
+    while (tokens->current != NULL && (tokens->current->type == T_ASTERISK || tokens->current->type == T_SLASH)) {
+        enum BinOpNodeType type;
+        if (tokens->current->type == T_ASTERISK) {
+            type = BINOP_MUL;
+        } else {  // tokens->current->type == T_SLASH
+            type = BINOP_DIV;
+        }
+
+        int line = tokens->current->line;
+
+        advance_token(tokens);
+        ParseNode* rhs = get_factor(tokens);
+
+        ParseNode* temp = malloc(sizeof(ParseNode));
+        temp->type = N_BIN_OP;
+        temp->line = line;
+        temp->bin_op_params.type = type;
+        temp->bin_op_params.left = result;
+        temp->bin_op_params.right = rhs;
+
+        result = temp;
+    }
+
+    return result;
+}
+
+static ParseNode* get_expression(TokenLL* tokens) {
+    ParseNode* result = get_term(tokens);
+
+    while (tokens->current != NULL && (tokens->current->type == T_PLUS || tokens->current->type == T_MINUS)) {
+        enum BinOpNodeType type;
+        if (tokens->current->type == T_PLUS) {
+            type = BINOP_ADD;
+        } else {  // tokens->current->type == T_MINUS
+            type = BINOP_SUB;
+        }
+
+        int line = tokens->current->line;
+
+        advance_token(tokens);
+        ParseNode* rhs = get_term(tokens);
+
+        ParseNode* temp = malloc(sizeof(ParseNode));
+        temp->type = N_BIN_OP;
+        temp->line = line;
+        temp->bin_op_params.type = type;
+        temp->bin_op_params.left = result;
+        temp->bin_op_params.right = rhs;
+
+        result = temp;
+    }
+
+    return result;
+}
+
+static ParseNode* get_statement(TokenLL* tokens) {
+    if (tokens->current->type == T_IDENTIFIER && tokens->current->next->type == T_EQUAL) {
+        size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
+        char* name = malloc(sizeof(char) * str_length);
+        strncpy(name, tokens->current->name, str_length);
+
+        advance_token(tokens);
+        int line = tokens->current->line;
+
+        advance_token(tokens);
+
+        ParseNode* value = get_expression(tokens);
+
+        ParseNode* result = malloc(sizeof(ParseNode));
+
+        result->type = N_VAR_ASSIGN;
+        result->line = line;
+        result->assign_params.name = name;
+        result->assign_params.value = value;
+
+        expect_token_type(tokens->current, T_SEMICOLON);
+        advance_token(tokens);
+
+        return result;
+    }
+
+    ParseNode* result = get_expression(tokens);
+    expect_token_type(tokens->current, T_SEMICOLON);
+    advance_token(tokens);
+    return result;
 }
 
 static ParseNode* get_function_definition(TokenLL* tokens) {
@@ -235,14 +351,22 @@ void free_AST(ParseNode* node) {
             free(node->var_def_params.name);
             break;
         case N_FUNC_CALL:
-            if (node->func_call_params.param_is_var) {
-                free(node->func_call_params.var_name);
-            }
+            free(node->func_call_params.param);
 
             free(node->func_call_params.name);
             break;
         case N_VAR_ASSIGN:
             free(node->assign_params.name);
+            free(node->assign_params.value);
+            break;
+        case N_BIN_OP:
+            free(node->bin_op_params.left);
+            free(node->bin_op_params.right);
+            break;
+        case N_NUMBER:
+            break;
+        case N_VARIABLE:
+            free(node->var_params.name);
             break;
     }
     free(node);
@@ -303,10 +427,11 @@ void print_AST(ParseNode* node, int indent) {
             print_indent(indent + 1);
             printf("Identifier: %s\n", node->func_call_params.name);
             print_indent(indent + 1);
-            if (node->func_call_params.param_is_var)
-                printf("Param: %s\n", node->func_call_params.var_name);
-            else
-                printf("Param: %d\n", node->func_call_params.param);
+            printf("Param: {\n");
+            if (node->func_call_params.param != NULL)
+                print_AST(node->func_call_params.param, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
 
             print_indent(indent);
             printf("}\n");
@@ -319,10 +444,45 @@ void print_AST(ParseNode* node, int indent) {
             print_indent(indent + 1);
             printf("Identifier: %s\n", node->assign_params.name);
             print_indent(indent + 1);
-            printf("Value: %d\n", node->assign_params.value);
+            printf("Value {\n");
+            print_AST(node->assign_params.value, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
 
             print_indent(indent);
             printf("}\n");
+            break;
+        }
+        case N_BIN_OP: {
+            print_indent(indent);
+            printf("Binary operation {\n");
+            print_indent(indent + 1);
+            printf("Type: %s\n", bin_op_node_type_to_string[node->bin_op_params.type]);
+
+            print_indent(indent + 1);
+            printf("Left-hand side {\n");
+            print_AST(node->bin_op_params.left, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
+
+            print_indent(indent + 1);
+            printf("Right-hand side {\n");
+            print_AST(node->bin_op_params.right, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
+
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
+        case N_NUMBER: {
+            print_indent(indent);
+            printf("Number: %d\n", node->num_params.value);
+            break;
+        }
+        case N_VARIABLE: {
+            print_indent(indent);
+            printf("Variable: %s\n", node->var_params.name);
             break;
         }
     }

@@ -20,7 +20,12 @@ char* token_type_to_name[] = {
     "T_LBRACE",
     "T_RBRACE",
     "T_SEMICOLON",
-    "T_EQUAL"};
+    "T_EQUAL",
+    "T_PLUS",
+    "T_MINUS",
+    "T_ASTERISK",
+    "T_SLASH",
+};
 
 char* keyword_type_to_name[] = {
     "K_FUNC",
@@ -143,18 +148,24 @@ void tokenize(char* text, TokenLL** result) {
         } else if (*text == '=') {
             append_token(*result, T_EQUAL, NULL);
             ++text;
+        } else if (*text == '+') {
+            append_token(*result, T_PLUS, NULL);
+            ++text;
+        } else if (*text == '-') {
+            append_token(*result, T_MINUS, NULL);
+            ++text;
+        } else if (*text == '*') {
+            append_token(*result, T_ASTERISK, NULL);
+            ++text;
         } else if (*text == '/') {
             ++text;
-            if (*text == EOF) break;
             if (*text == '/') {
                 ++text;
                 while (*text != '\n' && *text != EOF) {
                     ++text;
                 }
             } else {
-                char buffer[100];
-                snprintf(buffer, 100, "Expected '/', but found '%c' instead", *text);
-                panic(buffer);
+                append_token(*result, T_SLASH, NULL);
             }
         } else if (should_skip(*text)) {
             if (*text == '\n') ++curr_line;
