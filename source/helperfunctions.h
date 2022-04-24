@@ -5,4 +5,4 @@
 bool is_number(char c);
 bool is_identifier_char(char c);
 
-#endif //_HELPERFUNCTIONS_H
+#endif  //_HELPERFUNCTIONS_H

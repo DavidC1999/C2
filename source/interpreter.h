@@ -5,4 +5,4 @@
 
 void interpret(ParseNode* node);
 
-#endif //_INTERPRETER_H
+#endif  //_INTERPRETER_H
