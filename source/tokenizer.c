@@ -7,7 +7,7 @@
 #include "tokenizer.h"
 #include "helperfunctions.h"
 
-int _curr_line = 1;
+static int curr_line = 1;
 
 char* token_type_to_name[] = {
 	"T_HEAD",
@@ -27,11 +27,16 @@ char* keyword_type_to_name[] = {
 	"K_VAR",
 };
 
+static void panic(char* message) {
+	fprintf(stderr, "Error while tokenizing on line %d: %s\n", curr_line, message);
+	exit(1);
+}
+
 void append_token(TokenLL* tokens, int new_type, void* data) {
 	Token* new_token = (Token*)malloc(sizeof(Token));
 	new_token->type = new_type;
 	new_token->next = NULL;
-	new_token->line = _curr_line;
+	new_token->line = curr_line;
 	switch(new_type) {
 		case T_NUMBER:
 		case T_KEYWORD:
@@ -156,15 +161,17 @@ void tokenize(char* text, TokenLL** result) {
 					++text;
 				}
 			} else {
-				fprintf(stderr, "Unexpected char: %c\n", *text);
-				exit(1);
+				char buffer[100];
+				snprintf(buffer, 100, "Expected '/', but found '%c' instead", *text);
+				panic(buffer);
 			}
 		} else if (tokenizer_should_skip(*text)) {
-			if(*text == '\n') ++_curr_line;
+			if(*text == '\n') ++curr_line;
 			++text;
 		} else {
-			fprintf(stderr, "Unexpected char: %c\n", *text);
-			exit(1);
+			char buffer[100];
+			snprintf(buffer, 100, "Unexpected char: '%c'", *text);
+			panic(buffer);
 		}
 	}
 
