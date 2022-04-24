@@ -156,6 +156,19 @@ static int visit_node(ParseNode* node) {
         case N_NUMBER: {
             return node->num_params.value;
         }
+        case N_IF: {
+            if (visit_node(node->if_params.condition)) {
+                visit_node(node->if_params.statement);
+            }
+            break;
+        }
+        case N_COMPOUND: {
+            size_t statement_amt = node->compound_params.statement_amt;
+            for (size_t i = 0; i < statement_amt; ++i) {
+                visit_node(node->compound_params.statements[i]);
+            }
+            break;
+        }
         default: {
             panic("Unknown node type", node->line);
         }

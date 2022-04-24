@@ -38,14 +38,15 @@ enum TokenTypes {
     T_LESS,
     T_GEQUAL,
     T_LEQUAL,
-    T_EQUAL
+    T_EQUAL,
 };
 
 extern char* token_type_to_name[];
 
 enum KeywordTypes {
     K_FUNC,
-    K_VAR
+    K_VAR,
+    K_IF,
 };
 
 extern char* keyword_type_to_name[];

@@ -16,6 +16,8 @@ enum ParseNodeTypes {
     N_BIN_OP,
     N_NUMBER,
     N_VARIABLE,
+    N_IF,
+    N_COMPOUND,
 };
 
 enum BinOpNodeType {
@@ -36,13 +38,13 @@ typedef struct ParseNode ParseNode;
 
 typedef struct RootNode {
     int count;
-    struct ParseNode* definitions;
+    ParseNode* definitions;
 } RootNode;
 
 typedef struct FuncDefNode {
     char* name;
-    int statement_amt;
-    struct ParseNode** statements;
+    size_t statement_amt;
+    ParseNode** statements;
 } FuncDefNode;
 
 typedef struct VarDefNode {
@@ -73,6 +75,16 @@ typedef struct VariableNode {
     char* name;
 } VariableNode;
 
+typedef struct IfNode {
+    ParseNode* condition;
+    ParseNode* statement;
+} IfNode;
+
+typedef struct CompoundStatement {
+    size_t statement_amt;
+    ParseNode** statements;
+} CompoundStatement;
+
 struct ParseNode {
     enum ParseNodeTypes type;
     int line;
@@ -85,6 +97,8 @@ struct ParseNode {
         BinOpNode bin_op_params;
         NumberNode num_params;
         VariableNode var_params;
+        IfNode if_params;
+        CompoundStatement compound_params;
     };
 };
 

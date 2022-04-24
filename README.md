@@ -15,20 +15,22 @@ func printD() {
 // The main function will be called automatically
 func main() {
 	newLine = (1 + 1) * 4 + 2;
-	theLetterD = newLine + 58;
-	printD();
+
+	if(newLine > 1) {
+		theLetterD = newLine + 58;
+		printD();
+	}
 }
 ```
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] If statements
-- [ ] Local variables
 - [ ] While loops
 - [ ] User input
+- [ ] Local variables
 - [ ] Function parameter(s) for user-defined functions
 - [ ] Return values for functions (currently always implicitly 0)
 - [ ] Pointers
 - [ ] Arrays
 - [ ] String literals
-- [ ] Boolean operators high precendence than arithmetic operators
+- [ ] Boolean operators higher precendence than arithmetic operators
