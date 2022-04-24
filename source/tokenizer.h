@@ -29,11 +29,16 @@ enum TokenTypes {
     T_LBRACE,
     T_RBRACE,
     T_SEMICOLON,
-    T_EQUAL,
+    T_ASSIGN,
     T_PLUS,
     T_MINUS,
     T_ASTERISK,
-    T_SLASH
+    T_SLASH,
+    T_GREATER,
+    T_LESS,
+    T_GEQUAL,
+    T_LEQUAL,
+    T_EQUAL
 };
 
 extern char* token_type_to_name[];

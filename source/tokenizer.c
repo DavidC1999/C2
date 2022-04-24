@@ -20,11 +20,16 @@ char* token_type_to_name[] = {
     "T_LBRACE",
     "T_RBRACE",
     "T_SEMICOLON",
-    "T_EQUAL",
+    "T_ASSIGN",
     "T_PLUS",
     "T_MINUS",
     "T_ASTERISK",
     "T_SLASH",
+    "T_GREATER",
+    "T_LESS",
+    "T_GEQUAL",
+    "T_LEQUAL",
+    "T_EQUAL",
 };
 
 char* keyword_type_to_name[] = {
@@ -146,8 +151,13 @@ void tokenize(char* text, TokenLL** result) {
             append_token(*result, T_SEMICOLON, NULL);
             ++text;
         } else if (*text == '=') {
-            append_token(*result, T_EQUAL, NULL);
             ++text;
+            if (*text != EOF && *text == '=') {
+                append_token(*result, T_EQUAL, NULL);
+                ++text;
+            } else {
+                append_token(*result, T_ASSIGN, NULL);
+            }
         } else if (*text == '+') {
             append_token(*result, T_PLUS, NULL);
             ++text;
@@ -166,6 +176,22 @@ void tokenize(char* text, TokenLL** result) {
                 }
             } else {
                 append_token(*result, T_SLASH, NULL);
+            }
+        } else if (*text == '>') {
+            ++text;
+            if (*text != EOF && *text == '=') {
+                ++text;
+                append_token(*result, T_GEQUAL, NULL);
+            } else {
+                append_token(*result, T_GREATER, NULL);
+            }
+        } else if (*text == '<') {
+            ++text;
+            if (*text != EOF && *text == '=') {
+                ++text;
+                append_token(*result, T_LEQUAL, NULL);
+            } else {
+                append_token(*result, T_LESS, NULL);
             }
         } else if (should_skip(*text)) {
             if (*text == '\n') ++curr_line;
@@ -216,7 +242,7 @@ void print_tokens(Token* node) {
         case T_SEMICOLON:
             printf("';' -> ");
             break;
-        case T_EQUAL:
+        case T_ASSIGN:
             printf("'=' -> ");
             break;
         case T_PLUS:
@@ -230,6 +256,21 @@ void print_tokens(Token* node) {
             break;
         case T_ASTERISK:
             printf("'*' -> ");
+            break;
+        case T_EQUAL:
+            printf("'==' -> ");
+            break;
+        case T_LESS:
+            printf("'<' -> ");
+            break;
+        case T_LEQUAL:
+            printf("'<=' -> ");
+            break;
+        case T_GREATER:
+            printf("'>' -> ");
+            break;
+        case T_GEQUAL:
+            printf("'>=' -> ");
             break;
     }
     print_tokens(node->next);

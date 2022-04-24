@@ -23,6 +23,11 @@ enum BinOpNodeType {
     BINOP_SUB,
     BINOP_MUL,
     BINOP_DIV,
+    BINOP_EQUAL,
+    BINOP_LESS,
+    BINOP_LEQUAL,
+    BINOP_GREATER,
+    BINOP_GEQUAL,
 };
 
 extern char* bin_op_node_type_to_string[];

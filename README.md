@@ -22,7 +22,6 @@ func main() {
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] Boolean expressions
 - [ ] If statements
 - [ ] Local variables
 - [ ] While loops
@@ -32,3 +31,4 @@ More or less in order of priority:
 - [ ] Pointers
 - [ ] Arrays
 - [ ] String literals
+- [ ] Boolean operators high precendence than arithmetic operators

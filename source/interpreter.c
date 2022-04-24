@@ -129,6 +129,16 @@ static int visit_node(ParseNode* node) {
                     return left / right;
                 case BINOP_MUL:
                     return left * right;
+                case BINOP_EQUAL:
+                    return left == right;
+                case BINOP_LESS:
+                    return left < right;
+                case BINOP_LEQUAL:
+                    return left <= right;
+                case BINOP_GREATER:
+                    return left > right;
+                case BINOP_GEQUAL:
+                    return left >= right;
             }
             break;
         }

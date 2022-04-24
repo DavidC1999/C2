@@ -11,10 +11,14 @@ char* bin_op_node_type_to_string[] = {
     "BINOP_SUB",
     "BINOP_MUL",
     "BINOP_DIV",
+    "BINOP_EQUAL",
+    "BINOP_LESS",
+    "BINOP_LEQUAL",
+    "BINOP_GREATER",
+    "BINOP_GEQUAL",
 };
 
-static void
-advance_token(TokenLL* tokens) {
+static void advance_token(TokenLL* tokens) {
     if (tokens->current == NULL) return;
     tokens->current = tokens->current->next;
 }
@@ -138,15 +142,44 @@ static ParseNode* get_factor(TokenLL* tokens) {
     return NULL;
 }
 
+static bool token_type_is_term_binop(TokenLL* tokens) {
+    return (tokens->current->type == T_ASTERISK ||
+            tokens->current->type == T_SLASH ||
+            tokens->current->type == T_EQUAL ||
+            tokens->current->type == T_LESS ||
+            tokens->current->type == T_LEQUAL ||
+            tokens->current->type == T_GREATER ||
+            tokens->current->type == T_GEQUAL);
+}
+
 static ParseNode* get_term(TokenLL* tokens) {
     ParseNode* result = get_factor(tokens);
 
-    while (tokens->current != NULL && (tokens->current->type == T_ASTERISK || tokens->current->type == T_SLASH)) {
+    while (tokens->current != NULL && token_type_is_term_binop(tokens)) {
         enum BinOpNodeType type;
-        if (tokens->current->type == T_ASTERISK) {
-            type = BINOP_MUL;
-        } else {  // tokens->current->type == T_SLASH
-            type = BINOP_DIV;
+
+        switch (tokens->current->type) {
+            case T_ASTERISK:
+                type = BINOP_MUL;
+                break;
+            case T_SLASH:
+                type = BINOP_DIV;
+                break;
+            case T_EQUAL:
+                type = BINOP_EQUAL;
+                break;
+            case T_LESS:
+                type = BINOP_LESS;
+                break;
+            case T_LEQUAL:
+                type = BINOP_LEQUAL;
+                break;
+            case T_GREATER:
+                type = BINOP_GREATER;
+                break;
+            case T_GEQUAL:
+                type = BINOP_GEQUAL;
+                break;
         }
 
         int line = tokens->current->line;
@@ -201,7 +234,7 @@ static ParseNode* get_statement(TokenLL* tokens) {
         panic("unexpected end of token stream", tokens->tail->line);
     }
 
-    if (tokens->current->type == T_IDENTIFIER && tokens->current->next->type == T_EQUAL) {
+    if (tokens->current->type == T_IDENTIFIER && tokens->current->next->type == T_ASSIGN) {
         size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
         strncpy(name, tokens->current->name, str_length);
