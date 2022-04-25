@@ -36,6 +36,7 @@ char* keyword_type_to_name[] = {
     "K_FUNC",
     "K_VAR",
     "K_IF",
+    "K_WHILE",
 };
 
 static void panic(char* message) {
@@ -109,6 +110,10 @@ static void check_identifier_is_keyword(Token* token) {
         free(token->name);
         token->type = T_KEYWORD;
         token->number = K_IF;
+    } else if (strcmp(token->name, "while") == 0) {
+        free(token->name);
+        token->type = T_KEYWORD;
+        token->number = K_WHILE;
     }
 }
 

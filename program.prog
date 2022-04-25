@@ -1,17 +1,15 @@
-var theLetterD;
-var newLine;
+var i;
 
-func printD() {
-	putc(theLetterD);
-	putc(newLine);
+func incrementI() {
+	i = i + (10 / 10);
 }
 
 // The main function will be called automatically
 func main() {
-	newLine = (1 + 1) * 4 + 2;
+	i = 0;
+	while(i < 10) {
+		print(i);
 
-	if(newLine > 1) {
-		theLetterD = newLine + 58;
-		printD();
+		incrementI();
 	}
 }

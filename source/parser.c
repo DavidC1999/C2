@@ -260,8 +260,8 @@ static ParseNode* get_statement(TokenLL* tokens) {
         return result;
     }
 
-    // if-statement
-    if (tokens->current->type == T_KEYWORD && tokens->current->number == K_IF) {
+    // if statement & while loop
+    if (tokens->current->type == T_KEYWORD && (tokens->current->number == K_IF || tokens->current->number == K_WHILE)) {
         int line = tokens->current->line;
 
         advance_token(tokens);
@@ -276,10 +276,10 @@ static ParseNode* get_statement(TokenLL* tokens) {
         ParseNode* statement = get_statement(tokens);
 
         ParseNode* result = malloc(sizeof(ParseNode));
-        result->type = N_IF;
+        result->type = tokens->current->number == K_IF ? N_IF : N_WHILE;
         result->line = line;
-        result->if_params.condition = condition;
-        result->if_params.statement = statement;
+        result->cond_params.condition = condition;
+        result->cond_params.statement = statement;
 
         return result;
     }
@@ -475,8 +475,9 @@ void free_AST(ParseNode* node) {
             free(node->var_params.name);
             break;
         case N_IF:
-            free_AST(node->if_params.condition);
-            free_AST(node->if_params.statement);
+        case N_WHILE:
+            free_AST(node->cond_params.condition);
+            free_AST(node->cond_params.statement);
             break;
         case N_COMPOUND:
             for (size_t i = 0; i < node->compound_params.statement_amt; ++i) {
@@ -613,18 +614,19 @@ void print_AST(ParseNode* node, int indent) {
             printf("Variable: %s\n", node->var_params.name);
             break;
         }
+        case N_WHILE:
         case N_IF: {
             print_indent(indent);
-            printf("If statement {\n");
+            printf("%s statement {\n", node->type == N_IF ? "If" : "While");
             print_indent(indent + 1);
             printf("Condition {\n");
-            print_AST(node->if_params.condition, indent + 2);
+            print_AST(node->cond_params.condition, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
 
             print_indent(indent + 1);
             printf("Statement {\n");
-            print_AST(node->if_params.statement, indent + 2);
+            print_AST(node->cond_params.statement, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
             break;

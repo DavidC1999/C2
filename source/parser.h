@@ -17,6 +17,7 @@ enum ParseNodeTypes {
     N_NUMBER,
     N_VARIABLE,
     N_IF,
+    N_WHILE,
     N_COMPOUND,
 };
 
@@ -75,10 +76,11 @@ typedef struct VariableNode {
     char* name;
 } VariableNode;
 
-typedef struct IfNode {
+// For both if statements and while loops
+typedef struct ConditionalNode {
     ParseNode* condition;
     ParseNode* statement;
-} IfNode;
+} ConditionalNode;
 
 typedef struct CompoundStatement {
     size_t statement_amt;
@@ -97,7 +99,7 @@ struct ParseNode {
         BinOpNode bin_op_params;
         NumberNode num_params;
         VariableNode var_params;
-        IfNode if_params;
+        ConditionalNode cond_params;
         CompoundStatement compound_params;
     };
 };

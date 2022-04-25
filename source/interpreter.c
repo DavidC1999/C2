@@ -157,8 +157,14 @@ static int visit_node(ParseNode* node) {
             return node->num_params.value;
         }
         case N_IF: {
-            if (visit_node(node->if_params.condition)) {
-                visit_node(node->if_params.statement);
+            if (visit_node(node->cond_params.condition)) {
+                visit_node(node->cond_params.statement);
+            }
+            break;
+        }
+        case N_WHILE: {
+            while (visit_node(node->cond_params.condition)) {
+                visit_node(node->cond_params.statement);
             }
             break;
         }
