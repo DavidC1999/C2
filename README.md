@@ -4,7 +4,7 @@ This purely interpreted programming language goes by the very creative name of "
 It is a hobby project written in C (kinda regret that choice now, but sunken cost fallacy and all that) to mess around with parsing a programming language. Here's an example of what the syntax looks like as of now:
 
 ```
-var i;
+var i = 3;
 
 func incrementI() {
 	i = i + (10 / 10);
@@ -12,10 +12,7 @@ func incrementI() {
 
 // The main function will be called automatically
 func main() {
-	var max;
-
-	i = 0;
-	max = input_num();
+	var max = input_num();
 	
 	while(i < max) {
 		print(i);

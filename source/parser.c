@@ -371,6 +371,12 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
     identifier_name[identifier_len] = '\0';
     advance_token(tokens);
 
+    ParseNode* initial_val = NULL;
+    if (tokens->current->type == T_ASSIGN) {
+        advance_token(tokens);
+        initial_val = get_expression(tokens);
+    }
+
     expect_token_type(tokens, T_SEMICOLON);
     advance_token(tokens);
 
@@ -378,6 +384,7 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
     result->type = N_VAR_DEF;
     result->line = line;
     result->var_def_info.name = identifier_name;
+    result->var_def_info.initial_val = initial_val;
 
     return result;
 }
@@ -521,6 +528,16 @@ void print_AST(ParseNode* node, int indent) {
 
             print_indent(indent + 1);
             printf("Identifier: %s\n", node->var_def_info.name);
+
+            print_indent(indent + 1);
+            if (node->var_def_info.initial_val == NULL) {
+                printf("Initial value: none\n");
+            } else {
+                printf("Initial value {\n");
+                print_AST(node->var_def_info.initial_val, indent + 2);
+                print_indent(indent + 1);
+                printf("}\n");
+            }
 
             print_indent(indent);
             printf("}\n");

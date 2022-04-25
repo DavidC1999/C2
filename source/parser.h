@@ -49,6 +49,7 @@ typedef struct FuncDefNode {
 
 typedef struct VarDefNode {
     char* name;
+    ParseNode* initial_val;
 } VarDefNode;
 
 typedef struct FuncCallNode {

@@ -85,13 +85,15 @@ static void var_define(ParseNode* node) {
 
     int _;
 
+    int initial_value = node->var_def_info.initial_val == NULL ? 0 : visit_node(node->var_def_info.initial_val);
+
     if (curr_scope == -1) {
         if (hashtable_get_int(global_variables, &_, node->var_def_info.name)) {
             char buffer[100];
             snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
             panic(buffer, node->line);
         }
-        hashtable_set_int(global_variables, node->var_def_info.name, 0);
+        hashtable_set_int(global_variables, node->var_def_info.name, initial_value);
         return;
     }
 
@@ -102,7 +104,7 @@ static void var_define(ParseNode* node) {
         panic(buffer, node->line);
     }
 
-    hashtable_set_int(current, node->var_def_info.name, 0);
+    hashtable_set_int(current, node->var_def_info.name, initial_value);
 }
 
 static void var_set(ParseNode* node) {
