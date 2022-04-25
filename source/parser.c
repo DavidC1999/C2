@@ -229,9 +229,16 @@ static ParseNode* get_expression(TokenLL* tokens) {
     return result;
 }
 
+static ParseNode* get_variable_definition(TokenLL* tokens);
+
 static ParseNode* get_statement(TokenLL* tokens) {
     if (tokens->current == NULL) {
         panic("unexpected end of token stream", tokens->tail->line);
+    }
+
+    // variable definition
+    if (tokens->current->type == T_KEYWORD && tokens->current->number == K_VAR) {
+        return get_variable_definition(tokens);
     }
 
     // variable assignment

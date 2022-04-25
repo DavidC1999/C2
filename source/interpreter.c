@@ -12,6 +12,8 @@
 #define MAX_FUNCTION_NAME_LEN 100
 #define MAX_VARIABLE_AMT 100
 
+#define MAX_CALL_DEPTH 100
+
 static int visit_node(ParseNode* node);
 
 typedef struct UserFunc {
@@ -27,7 +29,9 @@ typedef struct BuiltinFunc {
 
 static HashTable* builtin_functions;
 
-static HashTable* variables;
+static HashTable* global_variables;
+static HashTable* var_scopes[MAX_CALL_DEPTH];
+static int curr_scope = -1;  // -1 for global scope
 
 static void panic(char* message, int line) {
     if (line >= 0)
@@ -35,6 +39,96 @@ static void panic(char* message, int line) {
     else
         fprintf(stderr, "Error while interpreting: %s\n", message);
     exit(1);
+}
+
+static void var_scope_append() {
+    var_scopes[curr_scope++] = hashtable_new(INT_T, MAX_VARIABLE_AMT);
+}
+
+static HashTable* var_scope_get_current() {
+    return var_scopes[curr_scope - 1];
+}
+
+static void var_scope_destroy() {
+    hashtable_free(var_scopes[--curr_scope]);
+}
+
+static int var_get(ParseNode* node) {
+    if (node == NULL || node->type != N_VARIABLE) {
+        char* error = "Trying to get variable value of non-variable node (this is an internal interpreter error)";
+        if (node == NULL)
+            panic(error, -1);
+        else
+            panic(error, node->line);
+    }
+
+    int result;
+    HashTable* current = var_scope_get_current();
+    if (hashtable_get_int(current, &result, node->variable_info.name)) return result;
+    if (hashtable_get_int(global_variables, &result, node->variable_info.name)) return result;
+
+    char buffer[100];
+    snprintf(buffer, 100, "Unknown variable: %s", node->variable_info.name);
+    panic(buffer, node->line);
+
+    return 0;
+}
+
+static void var_define(ParseNode* node) {
+    if (node == NULL || node->type != N_VAR_DEF) {
+        char* error = "Trying to define variable with non-variable node (this is an internal interpreter error)";
+        if (node == NULL)
+            panic(error, -1);
+        else
+            panic(error, node->line);
+    }
+
+    int _;
+
+    if (curr_scope == -1) {
+        if (hashtable_get_int(global_variables, &_, node->var_def_info.name)) {
+            char buffer[100];
+            snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
+            panic(buffer, node->line);
+        }
+        hashtable_set_int(global_variables, node->var_def_info.name, 0);
+        return;
+    }
+
+    HashTable* current = var_scope_get_current();
+    if (hashtable_get_int(current, &_, node->var_def_info.name)) {
+        char buffer[100];
+        snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
+        panic(buffer, node->line);
+    }
+
+    hashtable_set_int(current, node->var_def_info.name, 0);
+}
+
+static void var_set(ParseNode* node) {
+    if (node == NULL || node->type != N_VAR_ASSIGN) {
+        char* error = "Trying to set variable value of non-variable node (this is an internal interpreter error)";
+        if (node == NULL)
+            panic(error, -1);
+        else
+            panic(error, node->line);
+    }
+
+    int _;
+    HashTable* current = var_scope_get_current();
+    if (hashtable_get_int(current, &_, node->assign_info.name)) {
+        hashtable_set_int(current, node->assign_info.name, visit_node(node->assign_info.value));
+        return;
+    }
+
+    if (hashtable_get_int(global_variables, &_, node->assign_info.name)) {
+        hashtable_set_int(global_variables, node->assign_info.name, visit_node(node->assign_info.value));
+        return;
+    }
+
+    char buffer[100];
+    snprintf(buffer, 100, "Trying to assign to unknown variable: %s", node->assign_info.name);
+    panic(buffer, node->line);
 }
 
 static void init_funcs() {
@@ -65,7 +159,10 @@ static int call_func(char* name, ParseNode* callNode) {
     HashEntry buffer;
     if (hashtable_get(user_functions, &buffer, name)) {
         UserFunc* user_func = buffer.value;
+
+        var_scope_append();
         visit_node(user_func->statement);
+        var_scope_destroy();
 
         return 0;
     }
@@ -99,7 +196,7 @@ static int visit_node(ParseNode* node) {
             break;
         }
         case N_VAR_DEF: {
-            hashtable_set_int(variables, node->var_def_info.name, 0);
+            var_define(node);
             break;
         }
         case N_FUNC_CALL: {
@@ -108,13 +205,7 @@ static int visit_node(ParseNode* node) {
             break;
         }
         case N_VAR_ASSIGN: {
-            int _;
-            if (!hashtable_get_int(variables, &_, node->assign_info.name)) {
-                char buffer[100];
-                snprintf(buffer, 100, "Unknown variable: %s", node->assign_info.name);
-                panic(buffer, node->line);
-            }
-            hashtable_set_int(variables, node->assign_info.name, visit_node(node->assign_info.value));
+            var_set(node);
             break;
         }
         case N_BIN_OP: {
@@ -144,15 +235,7 @@ static int visit_node(ParseNode* node) {
             break;
         }
         case N_VARIABLE: {
-            int buffer;
-            if (hashtable_get_int(variables, &buffer, node->variable_info.name)) {
-                return buffer;
-            }
-
-            char strBuffer[100];
-            snprintf(strBuffer, 100, "Unknown variable: %s", node->variable_info.name);
-            panic(strBuffer, node->line);
-            break;
+            return var_get(node);
         }
         case N_NUMBER: {
             return node->number_info.value;
@@ -187,7 +270,7 @@ static int visit_node(ParseNode* node) {
 }
 
 void interpret(ParseNode* node) {
-    variables = hashtable_new(INT_T, MAX_VARIABLE_AMT);
+    global_variables = hashtable_new(INT_T, MAX_VARIABLE_AMT);
 
     init_funcs();
     if (node->type != N_ROOT) {
@@ -202,18 +285,20 @@ void interpret(ParseNode* node) {
         visit_node(definitions[i]);
     }
 
+    curr_scope = 0;
+
     call_func("main", NULL);
 
 #ifdef DEBUG
     char* var_name;
     int var_val;
-    printf("Variables:\n");
-    while (hashtable_get_next_int(variables, &var_name, &var_val)) {
+    printf("Global variables:\n");
+    while (hashtable_get_next_int(global_variables, &var_name, &var_val)) {
         printf("%s: %d\n", var_name, var_val);
     }
 #endif
 
     hashtable_free(builtin_functions);
     hashtable_free(user_functions);
-    hashtable_free(variables);
+    hashtable_free(global_variables);
 }

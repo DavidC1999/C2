@@ -4,28 +4,32 @@ This purely interpreted programming language goes by the very creative name of "
 It is a hobby project written in C (kinda regret that choice now, but sunken cost fallacy and all that) to mess around with parsing a programming language. Here's an example of what the syntax looks like as of now:
 
 ```
-var theLetterD;
-var newLine;
+var i;
 
-func printD() {
-	putc(theLetterD);
-	putc(newLine);
+func incrementI() {
+	i = i + (10 / 10);
 }
 
 // The main function will be called automatically
 func main() {
-	newLine = (1 + 1) * 4 + 2;
+	var max;
 
-	if(newLine > 1) {
-		theLetterD = newLine + 58;
-		printD();
+	i = 0;
+	max = input_num();
+
+	max;
+	
+	while(i < max) {
+		print(i);
+
+		incrementI();
 	}
 }
 ```
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] Local variables
+- [ ] Initial value for variables
 - [ ] Function parameter(s) for user-defined functions
 - [ ] Return values for functions (currently always implicitly 0)
 - [ ] Pointers
