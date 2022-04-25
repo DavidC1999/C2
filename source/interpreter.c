@@ -15,8 +15,7 @@
 static int visit_node(ParseNode* node);
 
 typedef struct UserFunc {
-    int statement_amt;
-    ParseNode** statements;
+    ParseNode* statement;
 } UserFunc;
 
 static HashTable* user_functions;
@@ -51,10 +50,9 @@ static void init_funcs() {
     hashtable_force_free_values(user_functions);
 }
 
-static void define_func(char* name, int line, int statement_amt, ParseNode** statements) {
+static void define_func(char* name, int line, ParseNode* statement) {
     UserFunc* new_func = malloc(sizeof(UserFunc));
-    new_func->statement_amt = statement_amt;
-    new_func->statements = statements;
+    new_func->statement = statement;
 
     if (!hashtable_set(user_functions, name, new_func)) {
         char buffer[100];
@@ -67,9 +65,7 @@ static int call_func(char* name, ParseNode* callNode) {
     HashEntry buffer;
     if (hashtable_get(user_functions, &buffer, name)) {
         UserFunc* user_func = buffer.value;
-        for (int i = 0; i < user_func->statement_amt; ++i) {
-            visit_node(user_func->statements[i]);
-        }
+        visit_node(user_func->statement);
 
         return 0;
     }
@@ -96,11 +92,10 @@ static int visit_node(ParseNode* node) {
     switch (node->type) {
         case N_FUNC_DEF: {
             char* name = node->func_def_params.name;
-            int statement_amt = node->func_def_params.statement_amt;
 
-            ParseNode** statements = node->func_def_params.statements;
+            ParseNode* statement = node->func_def_params.statement;
 
-            define_func(name, node->line, statement_amt, statements);
+            define_func(name, node->line, statement);
             break;
         }
         case N_VAR_DEF: {
@@ -176,7 +171,9 @@ static int visit_node(ParseNode* node) {
             break;
         }
         default: {
-            panic("Unknown node type", node->line);
+            char buffer[100];
+            snprintf(buffer, 100, "Unknown node type: %d", node->type);
+            panic(buffer, node->line);
         }
     }
 
@@ -195,8 +192,8 @@ void interpret(ParseNode* node) {
 
     int function_amt = node->root_params.count;
     for (int i = 0; i < function_amt; ++i) {
-        ParseNode* definitions = node->root_params.definitions;
-        visit_node(&definitions[i]);
+        ParseNode** definitions = node->root_params.definitions;
+        visit_node(definitions[i]);
     }
 
     call_func("main", NULL);

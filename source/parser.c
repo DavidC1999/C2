@@ -339,33 +339,15 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     advance_token(tokens);
     expect_token_type(tokens, T_RPAREN);
     advance_token(tokens);
-    expect_token_type(tokens, T_LBRACE);
-    advance_token(tokens);
+    expect_token_type(tokens, T_LBRACE);  // expect a compound statement
 
-    ParseNode* statements[MAX_STATEMENTS_PER_FUNC];
-
-    int statement_counter = 0;
-    while (tokens->current != NULL && tokens->current->type != T_RBRACE) {
-        if (statement_counter >= MAX_STATEMENTS_PER_FUNC) {
-            panic("Too many statements for one function", tokens->current->line);
-        }
-
-        statements[statement_counter++] = get_statement(tokens);
-    }
-
-    expect_token_type(tokens, T_RBRACE);
-    advance_token(tokens);
+    ParseNode* statement = get_statement(tokens);
 
     ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
     result->type = N_FUNC_DEF;
     result->line = line;
     result->func_def_params.name = identifier_name;
-    result->func_def_params.statement_amt = statement_counter;
-    result->func_def_params.statements = malloc(sizeof(ParseNode*) * statement_counter);
-
-    for (int i = 0; i < statement_counter; ++i) {
-        result->func_def_params.statements[i] = statements[i];
-    }
+    result->func_def_params.statement = statement;
 
     return result;
 }
@@ -419,15 +401,10 @@ ParseNode* parse(TokenLL* tokens) {
     result->type = N_ROOT;
     result->line = 0;
     result->root_params.count = definitions_counter;
-    result->root_params.definitions = (ParseNode*)malloc(sizeof(ParseNode) * definitions_counter);
+    result->root_params.definitions = malloc(sizeof(ParseNode*) * definitions_counter);
 
     for (int i = 0; i < definitions_counter; ++i) {
-        result->root_params.definitions[i].type = definitions[i]->type;
-        result->root_params.definitions[i].line = definitions[i]->line;
-        result->root_params.definitions[i].func_def_params.name = definitions[i]->func_def_params.name;
-        result->root_params.definitions[i].func_def_params.statement_amt = definitions[i]->func_def_params.statement_amt;
-        result->root_params.definitions[i].func_def_params.statements = definitions[i]->func_def_params.statements;
-        free(definitions[i]);
+        result->root_params.definitions[i] = definitions[i];
     }
 
     return result;
@@ -441,17 +418,15 @@ void free_AST(ParseNode* node) {
 
     switch (node->type) {
         case N_ROOT:
+            int count = node->root_params.count;
+            for (int i = 0; i < count; ++i) {
+                free(node->root_params.definitions[i]);
+            }
             free(node->root_params.definitions);
             break;
         case N_FUNC_DEF:
             free(node->func_def_params.name);
-
-            for (size_t i = 0; i < node->func_def_params.statement_amt; ++i) {
-                free(node->func_def_params.statements[i]);
-            }
-
-            free(node->func_def_params.statements);
-
+            free(node->func_def_params.statement);
             break;
         case N_VAR_DEF:
             free(node->var_def_params.name);
@@ -481,7 +456,7 @@ void free_AST(ParseNode* node) {
             break;
         case N_COMPOUND:
             for (size_t i = 0; i < node->compound_params.statement_amt; ++i) {
-                free(node->func_def_params.statements[i]);
+                free(node->compound_params.statements[i]);
             }
 
             free(node->compound_params.statements);
@@ -509,10 +484,10 @@ void print_AST(ParseNode* node, int indent) {
             printf("[\n");
 
             int def_amt = node->root_params.count;
-            ParseNode* definitions = node->root_params.definitions;
+            ParseNode** definitions = node->root_params.definitions;
 
             for (int i = 0; i < def_amt; ++i) {
-                print_AST(&definitions[i], indent + 1);
+                print_AST(definitions[i], indent + 1);
             }
 
             print_indent(indent);
@@ -525,12 +500,7 @@ void print_AST(ParseNode* node, int indent) {
 
             print_indent(indent + 1);
             printf("Name: %s\n", node->func_def_params.name);
-            print_indent(indent + 1);
-            printf("Statements: [\n");
-            int statement_amt = node->func_def_params.statement_amt;
-            for (int i = 0; i < statement_amt; ++i) {
-                print_AST(node->func_def_params.statements[i], indent + 2);
-            }
+            print_AST(node->func_def_params.statement, indent + 1);
             print_indent(indent + 1);
             printf("]\n");
 

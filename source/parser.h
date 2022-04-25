@@ -39,13 +39,12 @@ typedef struct ParseNode ParseNode;
 
 typedef struct RootNode {
     int count;
-    ParseNode* definitions;
+    ParseNode** definitions;
 } RootNode;
 
 typedef struct FuncDefNode {
     char* name;
-    size_t statement_amt;
-    ParseNode** statements;
+    ParseNode* statement;
 } FuncDefNode;
 
 typedef struct VarDefNode {
