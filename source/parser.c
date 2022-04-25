@@ -73,7 +73,7 @@ static ParseNode* get_function_call(TokenLL* tokens) {
         param = malloc(sizeof(ParseNode));
         param->type = N_NUMBER;
         param->line = tokens->current->line;
-        param->num_params.value = 0;
+        param->number_info.value = 0;
     }
 
     expect_token_type(tokens, T_RPAREN);
@@ -82,8 +82,8 @@ static ParseNode* get_function_call(TokenLL* tokens) {
     ParseNode* result = malloc(sizeof(ParseNode));
     result->type = N_FUNC_CALL;
     result->line = line;
-    result->func_call_params.name = name;
-    result->func_call_params.param = param;
+    result->func_call_info.name = name;
+    result->func_call_info.param = param;
 
     return result;
 }
@@ -106,7 +106,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
             ParseNode* result = malloc(sizeof(ParseNode*));
             result->type = N_VARIABLE;
             result->line = tokens->current->line;
-            result->var_params.name = name;
+            result->variable_info.name = name;
 
             advance_token(tokens);
             return result;
@@ -115,7 +115,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
             ParseNode* result = malloc(sizeof(ParseNode));
             result->type = N_NUMBER;
             result->line = tokens->current->line;
-            result->num_params.value = tokens->current->number;
+            result->number_info.value = tokens->current->number;
             advance_token(tokens);
             return result;
         }
@@ -190,9 +190,9 @@ static ParseNode* get_term(TokenLL* tokens) {
         ParseNode* temp = malloc(sizeof(ParseNode));
         temp->type = N_BIN_OP;
         temp->line = line;
-        temp->bin_op_params.type = type;
-        temp->bin_op_params.left = result;
-        temp->bin_op_params.right = rhs;
+        temp->bin_operation_info.type = type;
+        temp->bin_operation_info.left = result;
+        temp->bin_operation_info.right = rhs;
 
         result = temp;
     }
@@ -219,9 +219,9 @@ static ParseNode* get_expression(TokenLL* tokens) {
         ParseNode* temp = malloc(sizeof(ParseNode));
         temp->type = N_BIN_OP;
         temp->line = line;
-        temp->bin_op_params.type = type;
-        temp->bin_op_params.left = result;
-        temp->bin_op_params.right = rhs;
+        temp->bin_operation_info.type = type;
+        temp->bin_operation_info.left = result;
+        temp->bin_operation_info.right = rhs;
 
         result = temp;
     }
@@ -251,8 +251,8 @@ static ParseNode* get_statement(TokenLL* tokens) {
 
         result->type = N_VAR_ASSIGN;
         result->line = line;
-        result->assign_params.name = name;
-        result->assign_params.value = value;
+        result->assign_info.name = name;
+        result->assign_info.value = value;
 
         expect_token_type(tokens, T_SEMICOLON);
         advance_token(tokens);
@@ -278,8 +278,8 @@ static ParseNode* get_statement(TokenLL* tokens) {
         ParseNode* result = malloc(sizeof(ParseNode));
         result->type = tokens->current->number == K_IF ? N_IF : N_WHILE;
         result->line = line;
-        result->cond_params.condition = condition;
-        result->cond_params.statement = statement;
+        result->conditional_info.condition = condition;
+        result->conditional_info.statement = statement;
 
         return result;
     }
@@ -307,11 +307,11 @@ static ParseNode* get_statement(TokenLL* tokens) {
         ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
         result->type = N_COMPOUND;
         result->line = line;
-        result->compound_params.statement_amt = statement_counter;
-        result->compound_params.statements = malloc(sizeof(ParseNode*) * statement_counter);
+        result->compound_info.statement_amt = statement_counter;
+        result->compound_info.statements = malloc(sizeof(ParseNode*) * statement_counter);
 
         for (int i = 0; i < statement_counter; ++i) {
-            result->compound_params.statements[i] = statements[i];
+            result->compound_info.statements[i] = statements[i];
         }
 
         return result;
@@ -346,8 +346,8 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
     result->type = N_FUNC_DEF;
     result->line = line;
-    result->func_def_params.name = identifier_name;
-    result->func_def_params.statement = statement;
+    result->func_def_info.name = identifier_name;
+    result->func_def_info.statement = statement;
 
     return result;
 }
@@ -370,7 +370,7 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
     ParseNode* result = malloc(sizeof(ParseNode));
     result->type = N_VAR_DEF;
     result->line = line;
-    result->var_def_params.name = identifier_name;
+    result->var_def_info.name = identifier_name;
 
     return result;
 }
@@ -400,11 +400,11 @@ ParseNode* parse(TokenLL* tokens) {
     ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
     result->type = N_ROOT;
     result->line = 0;
-    result->root_params.count = definitions_counter;
-    result->root_params.definitions = malloc(sizeof(ParseNode*) * definitions_counter);
+    result->root_info.count = definitions_counter;
+    result->root_info.definitions = malloc(sizeof(ParseNode*) * definitions_counter);
 
     for (int i = 0; i < definitions_counter; ++i) {
-        result->root_params.definitions[i] = definitions[i];
+        result->root_info.definitions[i] = definitions[i];
     }
 
     return result;
@@ -418,48 +418,48 @@ void free_AST(ParseNode* node) {
 
     switch (node->type) {
         case N_ROOT:
-            int count = node->root_params.count;
+            int count = node->root_info.count;
             for (int i = 0; i < count; ++i) {
-                free(node->root_params.definitions[i]);
+                free(node->root_info.definitions[i]);
             }
-            free(node->root_params.definitions);
+            free(node->root_info.definitions);
             break;
         case N_FUNC_DEF:
-            free(node->func_def_params.name);
-            free(node->func_def_params.statement);
+            free(node->func_def_info.name);
+            free(node->func_def_info.statement);
             break;
         case N_VAR_DEF:
-            free(node->var_def_params.name);
+            free(node->var_def_info.name);
             break;
         case N_FUNC_CALL:
-            free(node->func_call_params.param);
+            free(node->func_call_info.param);
 
-            free(node->func_call_params.name);
+            free(node->func_call_info.name);
             break;
         case N_VAR_ASSIGN:
-            free(node->assign_params.name);
-            free(node->assign_params.value);
+            free(node->assign_info.name);
+            free(node->assign_info.value);
             break;
         case N_BIN_OP:
-            free(node->bin_op_params.left);
-            free(node->bin_op_params.right);
+            free(node->bin_operation_info.left);
+            free(node->bin_operation_info.right);
             break;
         case N_NUMBER:
             break;
         case N_VARIABLE:
-            free(node->var_params.name);
+            free(node->variable_info.name);
             break;
         case N_IF:
         case N_WHILE:
-            free_AST(node->cond_params.condition);
-            free_AST(node->cond_params.statement);
+            free_AST(node->conditional_info.condition);
+            free_AST(node->conditional_info.statement);
             break;
         case N_COMPOUND:
-            for (size_t i = 0; i < node->compound_params.statement_amt; ++i) {
-                free(node->compound_params.statements[i]);
+            for (size_t i = 0; i < node->compound_info.statement_amt; ++i) {
+                free(node->compound_info.statements[i]);
             }
 
-            free(node->compound_params.statements);
+            free(node->compound_info.statements);
 
             break;
     }
@@ -483,8 +483,8 @@ void print_AST(ParseNode* node, int indent) {
             print_indent(indent);
             printf("[\n");
 
-            int def_amt = node->root_params.count;
-            ParseNode** definitions = node->root_params.definitions;
+            int def_amt = node->root_info.count;
+            ParseNode** definitions = node->root_info.definitions;
 
             for (int i = 0; i < def_amt; ++i) {
                 print_AST(definitions[i], indent + 1);
@@ -499,8 +499,8 @@ void print_AST(ParseNode* node, int indent) {
             printf("Function definition {\n");
 
             print_indent(indent + 1);
-            printf("Name: %s\n", node->func_def_params.name);
-            print_AST(node->func_def_params.statement, indent + 1);
+            printf("Name: %s\n", node->func_def_info.name);
+            print_AST(node->func_def_info.statement, indent + 1);
             print_indent(indent + 1);
             printf("]\n");
 
@@ -513,7 +513,7 @@ void print_AST(ParseNode* node, int indent) {
             printf("Variable definition {\n");
 
             print_indent(indent + 1);
-            printf("Identifier: %s\n", node->var_def_params.name);
+            printf("Identifier: %s\n", node->var_def_info.name);
 
             print_indent(indent);
             printf("}\n");
@@ -524,11 +524,11 @@ void print_AST(ParseNode* node, int indent) {
             printf("Function call {\n");
 
             print_indent(indent + 1);
-            printf("Identifier: %s\n", node->func_call_params.name);
+            printf("Identifier: %s\n", node->func_call_info.name);
             print_indent(indent + 1);
             printf("Param: {\n");
-            if (node->func_call_params.param != NULL)
-                print_AST(node->func_call_params.param, indent + 2);
+            if (node->func_call_info.param != NULL)
+                print_AST(node->func_call_info.param, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
 
@@ -541,10 +541,10 @@ void print_AST(ParseNode* node, int indent) {
             printf("Variable assignment {\n");
 
             print_indent(indent + 1);
-            printf("Identifier: %s\n", node->assign_params.name);
+            printf("Identifier: %s\n", node->assign_info.name);
             print_indent(indent + 1);
             printf("Value {\n");
-            print_AST(node->assign_params.value, indent + 2);
+            print_AST(node->assign_info.value, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
 
@@ -556,17 +556,17 @@ void print_AST(ParseNode* node, int indent) {
             print_indent(indent);
             printf("Binary operation {\n");
             print_indent(indent + 1);
-            printf("Type: %s\n", bin_op_node_type_to_string[node->bin_op_params.type]);
+            printf("Type: %s\n", bin_op_node_type_to_string[node->bin_operation_info.type]);
 
             print_indent(indent + 1);
             printf("Left-hand side {\n");
-            print_AST(node->bin_op_params.left, indent + 2);
+            print_AST(node->bin_operation_info.left, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
 
             print_indent(indent + 1);
             printf("Right-hand side {\n");
-            print_AST(node->bin_op_params.right, indent + 2);
+            print_AST(node->bin_operation_info.right, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
 
@@ -576,12 +576,12 @@ void print_AST(ParseNode* node, int indent) {
         }
         case N_NUMBER: {
             print_indent(indent);
-            printf("Number: %d\n", node->num_params.value);
+            printf("Number: %d\n", node->number_info.value);
             break;
         }
         case N_VARIABLE: {
             print_indent(indent);
-            printf("Variable: %s\n", node->var_params.name);
+            printf("Variable: %s\n", node->variable_info.name);
             break;
         }
         case N_WHILE:
@@ -590,13 +590,13 @@ void print_AST(ParseNode* node, int indent) {
             printf("%s statement {\n", node->type == N_IF ? "If" : "While");
             print_indent(indent + 1);
             printf("Condition {\n");
-            print_AST(node->cond_params.condition, indent + 2);
+            print_AST(node->conditional_info.condition, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
 
             print_indent(indent + 1);
             printf("Statement {\n");
-            print_AST(node->cond_params.statement, indent + 2);
+            print_AST(node->conditional_info.statement, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
             break;
@@ -607,9 +607,9 @@ void print_AST(ParseNode* node, int indent) {
 
             print_indent(indent + 1);
             printf("Statements: [\n");
-            size_t statement_amt = node->compound_params.statement_amt;
+            size_t statement_amt = node->compound_info.statement_amt;
             for (size_t i = 0; i < statement_amt; ++i) {
-                print_AST(node->compound_params.statements[i], indent + 2);
+                print_AST(node->compound_info.statements[i], indent + 2);
             }
             print_indent(indent + 1);
             printf("]\n");

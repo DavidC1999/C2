@@ -90,16 +90,16 @@ struct ParseNode {
     enum ParseNodeTypes type;
     int line;
     union {
-        RootNode root_params;
-        FuncDefNode func_def_params;
-        VarDefNode var_def_params;
-        AssignNode assign_params;
-        FuncCallNode func_call_params;
-        BinOpNode bin_op_params;
-        NumberNode num_params;
-        VariableNode var_params;
-        ConditionalNode cond_params;
-        CompoundStatement compound_params;
+        RootNode root_info;
+        FuncDefNode func_def_info;
+        VarDefNode var_def_info;
+        AssignNode assign_info;
+        FuncCallNode func_call_info;
+        BinOpNode bin_operation_info;
+        NumberNode number_info;
+        VariableNode variable_info;
+        ConditionalNode conditional_info;
+        CompoundStatement compound_info;
     };
 };
 

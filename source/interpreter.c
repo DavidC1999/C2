@@ -73,7 +73,7 @@ static int call_func(char* name, ParseNode* callNode) {
     if (hashtable_get(builtin_functions, &buffer, name)) {
         int (*builtin_func)(int) = buffer.value;
         int param = 0;
-        if (callNode != NULL) param = visit_node(callNode->func_call_params.param);
+        if (callNode != NULL) param = visit_node(callNode->func_call_info.param);
         return builtin_func(param);
     }
 
@@ -91,31 +91,31 @@ static int call_func(char* name, ParseNode* callNode) {
 static int visit_node(ParseNode* node) {
     switch (node->type) {
         case N_FUNC_DEF: {
-            char* name = node->func_def_params.name;
+            char* name = node->func_def_info.name;
 
-            ParseNode* statement = node->func_def_params.statement;
+            ParseNode* statement = node->func_def_info.statement;
 
             define_func(name, node->line, statement);
             break;
         }
         case N_VAR_DEF: {
-            hashtable_set_int(variables, node->var_def_params.name, 0);
+            hashtable_set_int(variables, node->var_def_info.name, 0);
             break;
         }
         case N_FUNC_CALL: {
-            char* name = node->func_call_params.name;
+            char* name = node->func_call_info.name;
             return call_func(name, node);
             break;
         }
         case N_VAR_ASSIGN: {
-            hashtable_set_int(variables, node->assign_params.name, visit_node(node->assign_params.value));
+            hashtable_set_int(variables, node->assign_info.name, visit_node(node->assign_info.value));
             break;
         }
         case N_BIN_OP: {
-            int left = visit_node(node->bin_op_params.left);
-            int right = visit_node(node->bin_op_params.right);
+            int left = visit_node(node->bin_operation_info.left);
+            int right = visit_node(node->bin_operation_info.right);
 
-            switch (node->bin_op_params.type) {
+            switch (node->bin_operation_info.type) {
                 case BINOP_ADD:
                     return left + right;
                 case BINOP_SUB:
@@ -139,34 +139,34 @@ static int visit_node(ParseNode* node) {
         }
         case N_VARIABLE: {
             int buffer;
-            if (hashtable_get_int(variables, &buffer, node->var_params.name)) {
+            if (hashtable_get_int(variables, &buffer, node->variable_info.name)) {
                 return buffer;
             }
 
             char strBuffer[100];
-            snprintf(strBuffer, 100, "Unknown variable: %s", node->var_params.name);
+            snprintf(strBuffer, 100, "Unknown variable: %s", node->variable_info.name);
             panic(strBuffer, node->line);
             break;
         }
         case N_NUMBER: {
-            return node->num_params.value;
+            return node->number_info.value;
         }
         case N_IF: {
-            if (visit_node(node->cond_params.condition)) {
-                visit_node(node->cond_params.statement);
+            if (visit_node(node->conditional_info.condition)) {
+                visit_node(node->conditional_info.statement);
             }
             break;
         }
         case N_WHILE: {
-            while (visit_node(node->cond_params.condition)) {
-                visit_node(node->cond_params.statement);
+            while (visit_node(node->conditional_info.condition)) {
+                visit_node(node->conditional_info.statement);
             }
             break;
         }
         case N_COMPOUND: {
-            size_t statement_amt = node->compound_params.statement_amt;
+            size_t statement_amt = node->compound_info.statement_amt;
             for (size_t i = 0; i < statement_amt; ++i) {
-                visit_node(node->compound_params.statements[i]);
+                visit_node(node->compound_info.statements[i]);
             }
             break;
         }
@@ -190,9 +190,9 @@ void interpret(ParseNode* node) {
         panic(buffer, 0);
     }
 
-    int function_amt = node->root_params.count;
+    int function_amt = node->root_info.count;
     for (int i = 0; i < function_amt; ++i) {
-        ParseNode** definitions = node->root_params.definitions;
+        ParseNode** definitions = node->root_info.definitions;
         visit_node(definitions[i]);
     }
 
