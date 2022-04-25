@@ -16,8 +16,6 @@ func main() {
 
 	i = 0;
 	max = input_num();
-
-	max;
 	
 	while(i < max) {
 		print(i);
@@ -25,6 +23,7 @@ func main() {
 		incrementI();
 	}
 }
+
 ```
 
 ## TO DO LIST
