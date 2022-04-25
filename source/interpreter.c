@@ -108,6 +108,12 @@ static int visit_node(ParseNode* node) {
             break;
         }
         case N_VAR_ASSIGN: {
+            int _;
+            if (!hashtable_get_int(variables, &_, node->assign_info.name)) {
+                char buffer[100];
+                snprintf(buffer, 100, "Unknown variable: %s", node->assign_info.name);
+                panic(buffer, node->line);
+            }
             hashtable_set_int(variables, node->assign_info.name, visit_node(node->assign_info.value));
             break;
         }
