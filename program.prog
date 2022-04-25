@@ -1,4 +1,5 @@
 var i;
+var max;
 
 func incrementI() {
 	i = i + (10 / 10);
@@ -7,7 +8,9 @@ func incrementI() {
 // The main function will be called automatically
 func main() {
 	i = 0;
-	while(i < 10) {
+	max = input_num();
+	
+	while(i < max) {
 		print(i);
 
 		incrementI();

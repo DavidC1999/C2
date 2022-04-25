@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "builtin_functions.h"
 #include "hashtable/hashtable.h"
 #include "parser.h"
 
@@ -13,14 +14,6 @@
 
 static int visit_node(ParseNode* node);
 
-static void builtin_print(int param) {
-    printf("%d\n", param);
-}
-
-static void builtin_putc(int param) {
-    printf("%c", (char)param);
-}
-
 typedef struct UserFunc {
     int statement_amt;
     ParseNode** statements;
@@ -30,7 +23,7 @@ static HashTable* user_functions;
 
 typedef struct BuiltinFunc {
     char name[MAX_FUNCTION_NAME_LEN];
-    void (*func)(int);
+    int (*func)(int);
 } BuiltinFunc;
 
 static HashTable* builtin_functions;
@@ -38,7 +31,10 @@ static HashTable* builtin_functions;
 static HashTable* variables;
 
 static void panic(char* message, int line) {
-    fprintf(stderr, "Error while interpreting on line %d: %s\n", line, message);
+    if (line >= 0)
+        fprintf(stderr, "Error while interpreting on line %d: %s\n", line, message);
+    else
+        fprintf(stderr, "Error while interpreting: %s\n", message);
     exit(1);
 }
 
@@ -46,6 +42,7 @@ static void init_funcs() {
     builtin_functions = hashtable_new(ANY_T, MAX_BUILTIN_FUNCTIONS);
     hashtable_set(builtin_functions, "print", builtin_print);
     hashtable_set(builtin_functions, "putc", builtin_putc);
+    hashtable_set(builtin_functions, "input_num", builtin_input_num);
 
     user_functions = hashtable_new(ANY_T, MAX_USER_FUNCTIONS);
 
@@ -66,7 +63,7 @@ static void define_func(char* name, int line, int statement_amt, ParseNode** sta
     }
 }
 
-static bool call_func(char* name, int param) {
+static int call_func(char* name, ParseNode* callNode) {
     HashEntry buffer;
     if (hashtable_get(user_functions, &buffer, name)) {
         UserFunc* user_func = buffer.value;
@@ -74,16 +71,25 @@ static bool call_func(char* name, int param) {
             visit_node(user_func->statements[i]);
         }
 
-        return true;
+        return 0;
     }
 
     if (hashtable_get(builtin_functions, &buffer, name)) {
-        void (*builtin_func)(int) = buffer.value;
-        builtin_func(param);
-        return true;
+        int (*builtin_func)(int) = buffer.value;
+        int param = 0;
+        if (callNode != NULL) param = visit_node(callNode->func_call_params.param);
+        return builtin_func(param);
     }
 
-    return false;
+    char str_buffer[100];
+    snprintf(str_buffer, 100, "Unknown function: %s", name);
+
+    if (callNode != NULL)
+        panic(str_buffer, callNode->line);
+    else
+        panic(str_buffer, -1);
+
+    return 0;
 }
 
 static int visit_node(ParseNode* node) {
@@ -103,13 +109,7 @@ static int visit_node(ParseNode* node) {
         }
         case N_FUNC_CALL: {
             char* name = node->func_call_params.name;
-            bool success = call_func(name, visit_node(node->func_call_params.param));
-
-            if (!success) {
-                char buffer[100];
-                snprintf(buffer, 100, "Unknown function: %s", name);
-                panic(buffer, node->line);
-            }
+            return call_func(name, node);
             break;
         }
         case N_VAR_ASSIGN: {
@@ -199,10 +199,7 @@ void interpret(ParseNode* node) {
         visit_node(&definitions[i]);
     }
 
-    bool success = call_func("main", 0);
-    if (!success) {
-        panic("Every program should have a main function", 0);
-    }
+    call_func("main", NULL);
 
 #ifdef DEBUG
     char* var_name;

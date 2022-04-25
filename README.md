@@ -25,7 +25,6 @@ func main() {
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] User input
 - [ ] Local variables
 - [ ] Function parameter(s) for user-defined functions
 - [ ] Return values for functions (currently always implicitly 0)
