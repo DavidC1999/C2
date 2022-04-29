@@ -281,6 +281,7 @@ static ParseNode* get_statement(TokenLL* tokens) {
     // if statement & while loop
     if (tokens->current->type == T_KEYWORD && (tokens->current->number == K_IF || tokens->current->number == K_WHILE)) {
         int line = tokens->current->line;
+        int keyword_type = tokens->current->number;
 
         advance_token(tokens);
         expect_token_type(tokens, T_LPAREN);
@@ -294,7 +295,7 @@ static ParseNode* get_statement(TokenLL* tokens) {
         ParseNode* statement = get_statement(tokens);
 
         ParseNode* result = malloc(sizeof(ParseNode));
-        result->type = tokens->current->number == K_IF ? N_IF : N_WHILE;
+        result->type = keyword_type == K_IF ? N_IF : N_WHILE;
         result->line = line;
         result->conditional_info.condition = condition;
         result->conditional_info.statement = statement;
