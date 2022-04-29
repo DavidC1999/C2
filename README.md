@@ -25,8 +25,6 @@ func main() {
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] Initial value for variables
-- [ ] Function parameter(s) for user-defined functions
 - [ ] Return values for functions (currently always implicitly 0)
 - [ ] Pointers
 - [ ] Arrays

@@ -6,6 +6,7 @@
 #include "tokenizer.h"
 
 #define MAX_STATEMENTS_PER_FUNC 1000
+#define MAX_PARAMS_PER_FUNC 100
 
 enum ParseNodeTypes {
     N_ROOT,
@@ -45,6 +46,8 @@ typedef struct RootNode {
 typedef struct FuncDefNode {
     char* name;
     ParseNode* statement;
+    size_t param_count;
+    char** params;
 } FuncDefNode;
 
 typedef struct VarDefNode {
@@ -54,7 +57,8 @@ typedef struct VarDefNode {
 
 typedef struct FuncCallNode {
     char* name;
-    ParseNode* param;
+    int param_count;
+    ParseNode** params;
 } FuncCallNode;
 
 typedef struct AssignNode {

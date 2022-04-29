@@ -63,17 +63,24 @@ static ParseNode* get_function_call(TokenLL* tokens) {
     advance_token(tokens);
 
     expect_token_type(tokens, T_LPAREN);
-    advance_token(tokens);
 
-    ParseNode* param;
-    if (tokens->current->type != T_RPAREN) {
-        param = get_expression(tokens);
+    // TODO: dynamic array
+    ParseNode* func_params[MAX_PARAMS_PER_FUNC];
+    int param_counter = 0;
+
+    if (tokens->current->next->type != T_RPAREN) {
+        do {
+            if (param_counter >= MAX_PARAMS_PER_FUNC) {
+                panic("Too many function parameters", tokens->current->line);
+            }
+
+            advance_token(tokens);
+            func_params[param_counter] = get_expression(tokens);
+
+            ++param_counter;
+        } while (tokens->current->type == T_COMMA);
     } else {
-        // implicitly pass 0:
-        param = malloc(sizeof(ParseNode));
-        param->type = N_NUMBER;
-        param->line = tokens->current->line;
-        param->number_info.value = 0;
+        advance_token(tokens);
     }
 
     expect_token_type(tokens, T_RPAREN);
@@ -83,7 +90,11 @@ static ParseNode* get_function_call(TokenLL* tokens) {
     result->type = N_FUNC_CALL;
     result->line = line;
     result->func_call_info.name = name;
-    result->func_call_info.param = param;
+    result->func_call_info.param_count = param_counter;
+    result->func_call_info.params = malloc(sizeof(ParseNode*) * param_counter);
+    for (int i = 0; i < param_counter; ++i) {
+        result->func_call_info.params[i] = func_params[i];
+    }
 
     return result;
 }
@@ -343,7 +354,32 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     advance_token(tokens);
 
     expect_token_type(tokens, T_LPAREN);
-    advance_token(tokens);
+
+    // TODO: dynamic array
+    char* func_params[MAX_PARAMS_PER_FUNC];
+    int param_counter = 0;
+
+    if (tokens->current->next->type == T_IDENTIFIER) {
+        do {
+            if (param_counter >= MAX_PARAMS_PER_FUNC) {
+                panic("Too many function parameters", tokens->current->line);
+            }
+
+            advance_token(tokens);
+            expect_token_type(tokens, T_IDENTIFIER);
+
+            size_t param_len = strlen(tokens->current->name) + 1;  // including '\0'
+            func_params[param_counter] = malloc(sizeof(char) * param_len);
+            strncpy(func_params[param_counter], tokens->current->name, param_len);
+
+            advance_token(tokens);
+
+            ++param_counter;
+        } while (tokens->current->type == T_COMMA);
+    } else {
+        advance_token(tokens);
+    }
+
     expect_token_type(tokens, T_RPAREN);
     advance_token(tokens);
     expect_token_type(tokens, T_LBRACE);  // expect a compound statement
@@ -355,6 +391,11 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     result->line = line;
     result->func_def_info.name = identifier_name;
     result->func_def_info.statement = statement;
+    result->func_def_info.param_count = param_counter;
+    result->func_def_info.params = malloc(sizeof(char*) * param_counter);
+    for (int i = 0; i < param_counter; ++i) {
+        result->func_def_info.params[i] = func_params[i];
+    }
 
     return result;
 }
@@ -439,6 +480,10 @@ void free_AST(ParseNode* node) {
             free(node->root_info.definitions);
             break;
         case N_FUNC_DEF:
+            for (size_t i = 0; i < node->func_def_info.param_count; ++i) {
+                free(node->func_def_info.params[i]);
+            }
+            free(node->func_def_info.params);
             free(node->func_def_info.name);
             free(node->func_def_info.statement);
             break;
@@ -446,7 +491,10 @@ void free_AST(ParseNode* node) {
             free(node->var_def_info.name);
             break;
         case N_FUNC_CALL:
-            free(node->func_call_info.param);
+            for (int i = 0; i < node->func_call_info.param_count; ++i) {
+                free(node->func_call_info.params[i]);
+            }
+            free(node->func_call_info.params);
 
             free(node->func_call_info.name);
             break;
@@ -514,9 +562,17 @@ void print_AST(ParseNode* node, int indent) {
 
             print_indent(indent + 1);
             printf("Name: %s\n", node->func_def_info.name);
-            print_AST(node->func_def_info.statement, indent + 1);
+
+            print_indent(indent + 1);
+            printf("Params [\n");
+            for (size_t i = 0; i < node->func_def_info.param_count; ++i) {
+                print_indent(indent + 2);
+                printf("%s\n", node->func_def_info.params[i]);
+            }
             print_indent(indent + 1);
             printf("]\n");
+
+            print_AST(node->func_def_info.statement, indent + 1);
 
             print_indent(indent);
             printf("}\n");
@@ -550,11 +606,11 @@ void print_AST(ParseNode* node, int indent) {
             print_indent(indent + 1);
             printf("Identifier: %s\n", node->func_call_info.name);
             print_indent(indent + 1);
-            printf("Param: {\n");
-            if (node->func_call_info.param != NULL)
-                print_AST(node->func_call_info.param, indent + 2);
+            printf("Params [\n");
+            for (int i = 0; i < node->func_call_info.param_count; ++i)
+                print_AST(node->func_call_info.params[i], indent + 2);
             print_indent(indent + 1);
-            printf("}\n");
+            printf("]\n");
 
             print_indent(indent);
             printf("}\n");

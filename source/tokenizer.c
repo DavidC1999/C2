@@ -30,6 +30,7 @@ char* token_type_to_name[] = {
     "T_GEQUAL",
     "T_LEQUAL",
     "T_EQUAL",
+    "T_COMMA",
 };
 
 char* keyword_type_to_name[] = {
@@ -159,6 +160,9 @@ void tokenize(char* text, TokenLL** result) {
             ++text;
         } else if (*text == ';') {
             append_token(*result, T_SEMICOLON, NULL);
+            ++text;
+        } else if (*text == ',') {
+            append_token(*result, T_COMMA, NULL);
             ++text;
         } else if (*text == '=') {
             ++text;

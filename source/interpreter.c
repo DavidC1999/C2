@@ -1,3 +1,5 @@
+#include "interpreter.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +19,8 @@
 static int visit_node(ParseNode* node);
 
 typedef struct UserFunc {
+    int param_count;
+    char** params;
     ParseNode* statement;
 } UserFunc;
 
@@ -24,7 +28,7 @@ static HashTable* user_functions;
 
 typedef struct BuiltinFunc {
     char name[MAX_FUNCTION_NAME_LEN];
-    int (*func)(int);
+    int (*func)(builtin_panic_func_t, int, int*);
 } BuiltinFunc;
 
 static HashTable* builtin_functions;
@@ -39,6 +43,14 @@ static void panic(char* message, int line) {
     else
         fprintf(stderr, "Error while interpreting: %s\n", message);
     exit(1);
+}
+
+static char* curr_builtin_call = "";
+static int curr_builtin_line = 0;
+static void builtin_panic(char* message) {
+    char buffer[500];
+    snprintf(buffer, 500, "Error while running builtin function %s: %s", curr_builtin_call, message);
+    panic(buffer, curr_builtin_line);
 }
 
 static void var_scope_append() {
@@ -74,6 +86,29 @@ static int var_get(ParseNode* node) {
     return 0;
 }
 
+static void var_define_manual(char* name, int value, int line) {
+    int _;
+
+    if (curr_scope == -1) {
+        if (hashtable_get_int(global_variables, &_, name)) {
+            char buffer[100];
+            snprintf(buffer, 100, "Variable with name '%s' already exists", name);
+            panic(buffer, line);
+        }
+        hashtable_set_int(global_variables, name, value);
+        return;
+    }
+
+    HashTable* current = var_scope_get_current();
+    if (hashtable_get_int(current, &_, name)) {
+        char buffer[100];
+        snprintf(buffer, 100, "Variable with name '%s' already exists", name);
+        panic(buffer, line);
+    }
+
+    hashtable_set_int(current, name, value);
+}
+
 static void var_define(ParseNode* node) {
     if (node == NULL || node->type != N_VAR_DEF) {
         char* error = "Trying to define variable with non-variable node (this is an internal interpreter error)";
@@ -83,28 +118,29 @@ static void var_define(ParseNode* node) {
             panic(error, node->line);
     }
 
-    int _;
+    // int _;
 
     int initial_value = node->var_def_info.initial_val == NULL ? 0 : visit_node(node->var_def_info.initial_val);
 
-    if (curr_scope == -1) {
-        if (hashtable_get_int(global_variables, &_, node->var_def_info.name)) {
-            char buffer[100];
-            snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
-            panic(buffer, node->line);
-        }
-        hashtable_set_int(global_variables, node->var_def_info.name, initial_value);
-        return;
-    }
+    var_define_manual(node->var_def_info.name, initial_value, node->line);
+    // if (curr_scope == -1) {
+    //     if (hashtable_get_int(global_variables, &_, node->var_def_info.name)) {
+    //         char buffer[100];
+    //         snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
+    //         panic(buffer, node->line);
+    //     }
+    //     hashtable_set_int(global_variables, node->var_def_info.name, initial_value);
+    //     return;
+    // }
 
-    HashTable* current = var_scope_get_current();
-    if (hashtable_get_int(current, &_, node->var_def_info.name)) {
-        char buffer[100];
-        snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
-        panic(buffer, node->line);
-    }
+    // HashTable* current = var_scope_get_current();
+    // if (hashtable_get_int(current, &_, node->var_def_info.name)) {
+    //     char buffer[100];
+    //     snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
+    //     panic(buffer, node->line);
+    // }
 
-    hashtable_set_int(current, node->var_def_info.name, initial_value);
+    // hashtable_set_int(current, node->var_def_info.name, initial_value);
 }
 
 static void var_set(ParseNode* node) {
@@ -146,41 +182,67 @@ static void init_funcs() {
     hashtable_force_free_values(user_functions);
 }
 
-static void define_func(char* name, int line, ParseNode* statement) {
+static void define_func(ParseNode* func_def_node) {
     UserFunc* new_func = malloc(sizeof(UserFunc));
-    new_func->statement = statement;
+    new_func->param_count = func_def_node->func_def_info.param_count;
+    new_func->params = func_def_node->func_def_info.params;
+    new_func->statement = func_def_node->func_def_info.statement;
 
-    if (!hashtable_set(user_functions, name, new_func)) {
+    if (!hashtable_set(user_functions, func_def_node->func_def_info.name, new_func)) {
         char buffer[100];
-        snprintf(buffer, 100, "Unable to define function %s", name);
-        panic(buffer, line);
+        snprintf(buffer, 100, "Unable to define function %s", func_def_node->func_def_info.name);
+        panic(buffer, func_def_node->line);
     }
 }
 
-static int call_func(char* name, ParseNode* callNode) {
+static int call_func(ParseNode* call_node) {
     HashEntry buffer;
-    if (hashtable_get(user_functions, &buffer, name)) {
+    if (hashtable_get(user_functions, &buffer, call_node->func_call_info.name)) {
         UserFunc* user_func = buffer.value;
 
+        int param_amt_given = call_node->func_call_info.param_count;
+
+        if (param_amt_given != user_func->param_count) {
+            char buffer[100];
+            snprintf(
+                buffer,
+                100,
+                "Function %s expects %d arguments, but %d were given",
+                call_node->func_call_info.name,
+                user_func->param_count, param_amt_given);
+            panic(buffer, call_node->line);
+        }
+
         var_scope_append();
+
+        for (int i = 0; i < user_func->param_count; ++i) {
+            var_define_manual(user_func->params[i], visit_node(call_node->func_call_info.params[i]), call_node->line);
+        }
+
         visit_node(user_func->statement);
         var_scope_destroy();
 
         return 0;
     }
 
-    if (hashtable_get(builtin_functions, &buffer, name)) {
-        int (*builtin_func)(int) = buffer.value;
-        int param = 0;
-        if (callNode != NULL) param = visit_node(callNode->func_call_info.param);
-        return builtin_func(param);
+    if (hashtable_get(builtin_functions, &buffer, call_node->func_call_info.name)) {
+        int params[call_node->func_call_info.param_count];
+
+        for (int i = 0; i < call_node->func_call_info.param_count; ++i) {
+            params[i] = visit_node(call_node->func_call_info.params[i]);
+        }
+
+        builtin_func_t builtin_func = buffer.value;
+        curr_builtin_call = call_node->func_call_info.name;
+        curr_builtin_line = call_node->line;
+        return builtin_func(builtin_panic, call_node->func_call_info.param_count, params);
     }
 
     char str_buffer[100];
-    snprintf(str_buffer, 100, "Unknown function: %s", name);
+    snprintf(str_buffer, 100, "Unknown function: %s", call_node->func_call_info.name);
 
-    if (callNode != NULL)
-        panic(str_buffer, callNode->line);
+    if (call_node != NULL)
+        panic(str_buffer, call_node->line);
     else
         panic(str_buffer, -1);
 
@@ -190,11 +252,7 @@ static int call_func(char* name, ParseNode* callNode) {
 static int visit_node(ParseNode* node) {
     switch (node->type) {
         case N_FUNC_DEF: {
-            char* name = node->func_def_info.name;
-
-            ParseNode* statement = node->func_def_info.statement;
-
-            define_func(name, node->line, statement);
+            define_func(node);
             break;
         }
         case N_VAR_DEF: {
@@ -202,8 +260,7 @@ static int visit_node(ParseNode* node) {
             break;
         }
         case N_FUNC_CALL: {
-            char* name = node->func_call_info.name;
-            return call_func(name, node);
+            return call_func(node);
             break;
         }
         case N_VAR_ASSIGN: {
@@ -289,7 +346,15 @@ void interpret(ParseNode* node) {
 
     curr_scope = 0;
 
-    call_func("main", NULL);
+    HashEntry _;
+    if (!hashtable_get(user_functions, &_, "main")) {
+        panic("Every program must have a main function", -1);
+    }
+
+    ParseNode main_call;
+    main_call.func_call_info.name = "main";
+    main_call.func_call_info.param_count = 0;
+    call_func(&main_call);
 
 #ifdef DEBUG
     char* var_name;
