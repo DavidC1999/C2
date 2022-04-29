@@ -18,6 +18,10 @@ char* bin_op_node_type_to_string[] = {
     "BINOP_GEQUAL",
 };
 
+char* un_op_node_type_to_string[] = {
+    "UN_NEGATE",
+};
+
 static void advance_token(TokenLL* tokens) {
     if (tokens->current == NULL) return;
     tokens->current = tokens->current->next;
@@ -135,6 +139,19 @@ static ParseNode* get_factor(TokenLL* tokens) {
             ParseNode* result = get_expression(tokens);
             expect_token_type(tokens, T_RPAREN);
             advance_token(tokens);
+            return result;
+        }
+        case T_MINUS: {
+            int line = tokens->current->line;
+            advance_token(tokens);
+
+            ParseNode* operand = get_expression(tokens);
+
+            ParseNode* result = malloc(sizeof(ParseNode));
+            result->type = N_UN_OP;
+            result->line = line;
+            result->un_operation_info.type = UNOP_NEGATE;
+            result->un_operation_info.operand = operand;
             return result;
         }
     }
@@ -533,6 +550,9 @@ void free_AST(ParseNode* node) {
             free(node->bin_operation_info.left);
             free(node->bin_operation_info.right);
             break;
+        case N_UN_OP:
+            free(node->un_operation_info.operand);
+            break;
         case N_NUMBER:
             break;
         case N_VARIABLE:
@@ -677,6 +697,22 @@ void print_AST(ParseNode* node, int indent) {
             print_indent(indent + 1);
             printf("Right-hand side {\n");
             print_AST(node->bin_operation_info.right, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
+
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
+        case N_UN_OP: {
+            print_indent(indent);
+            printf("Unary operation {\n");
+            print_indent(indent + 1);
+            printf("Type: %s\n", un_op_node_type_to_string[node->un_operation_info.type]);
+
+            print_indent(indent + 1);
+            printf("Operand {\n");
+            print_AST(node->un_operation_info.operand, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
 

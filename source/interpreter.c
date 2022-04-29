@@ -283,6 +283,15 @@ static int visit_node(ParseNode* node) {
             }
             break;
         }
+        case N_UN_OP: {
+            int operand = visit_node(node->un_operation_info.operand);
+
+            switch (node->un_operation_info.type) {
+                case UNOP_NEGATE:
+                    return -operand;
+            }
+            break;
+        }
         case N_VARIABLE: {
             return var_get(node);
         }

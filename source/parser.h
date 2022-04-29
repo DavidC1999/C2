@@ -15,6 +15,7 @@ enum ParseNodeTypes {
     N_FUNC_CALL,
     N_VAR_ASSIGN,
     N_BIN_OP,
+    N_UN_OP,
     N_NUMBER,
     N_VARIABLE,
     N_IF,
@@ -35,7 +36,12 @@ enum BinOpNodeType {
     BINOP_GEQUAL,
 };
 
+enum UnOpNodeType {
+    UNOP_NEGATE,
+};
+
 extern char* bin_op_node_type_to_string[];
+extern char* un_op_node_type_to_string[];
 
 typedef struct ParseNode ParseNode;
 
@@ -73,6 +79,11 @@ typedef struct BinOpNode {
     ParseNode* right;
 } BinOpNode;
 
+typedef struct UnOpNode {
+    enum UnOpNodeType type;
+    ParseNode* operand;
+} UnOpNode;
+
 typedef struct NumberNode {
     int value;
 } NumberNode;
@@ -106,6 +117,7 @@ struct ParseNode {
         AssignNode assign_info;
         FuncCallNode func_call_info;
         BinOpNode bin_operation_info;
+        UnOpNode un_operation_info;
         NumberNode number_info;
         VariableNode variable_info;
         ConditionalNode conditional_info;
