@@ -24,6 +24,8 @@ typedef struct UserFunc {
     ParseNode* statement;
 } UserFunc;
 
+static int user_function_ret_val = 0;         // return value for the user function currently running
+static bool user_function_returning = false;  // set to true by 'return' statement. Reset by 'call_func'
 static HashTable* user_functions;
 
 typedef struct BuiltinFunc {
@@ -118,29 +120,9 @@ static void var_define(ParseNode* node) {
             panic(error, node->line);
     }
 
-    // int _;
-
     int initial_value = node->var_def_info.initial_val == NULL ? 0 : visit_node(node->var_def_info.initial_val);
 
     var_define_manual(node->var_def_info.name, initial_value, node->line);
-    // if (curr_scope == -1) {
-    //     if (hashtable_get_int(global_variables, &_, node->var_def_info.name)) {
-    //         char buffer[100];
-    //         snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
-    //         panic(buffer, node->line);
-    //     }
-    //     hashtable_set_int(global_variables, node->var_def_info.name, initial_value);
-    //     return;
-    // }
-
-    // HashTable* current = var_scope_get_current();
-    // if (hashtable_get_int(current, &_, node->var_def_info.name)) {
-    //     char buffer[100];
-    //     snprintf(buffer, 100, "Variable with name '%s' already exists", node->var_def_info.name);
-    //     panic(buffer, node->line);
-    // }
-
-    // hashtable_set_int(current, node->var_def_info.name, initial_value);
 }
 
 static void var_set(ParseNode* node) {
@@ -219,10 +201,13 @@ static int call_func(ParseNode* call_node) {
             var_define_manual(user_func->params[i], visit_node(call_node->func_call_info.params[i]), call_node->line);
         }
 
+        user_function_ret_val = 0;
         visit_node(user_func->statement);
+        user_function_returning = false;
+
         var_scope_destroy();
 
-        return 0;
+        return user_function_ret_val;
     }
 
     if (hashtable_get(builtin_functions, &buffer, call_node->func_call_info.name)) {
@@ -250,6 +235,11 @@ static int call_func(ParseNode* call_node) {
 }
 
 static int visit_node(ParseNode* node) {
+    if (user_function_returning) {
+        // Function is returning. Stop executing statements in the function.
+        return 0;
+    }
+
     switch (node->type) {
         case N_FUNC_DEF: {
             define_func(node);
@@ -316,6 +306,11 @@ static int visit_node(ParseNode* node) {
             for (size_t i = 0; i < statement_amt; ++i) {
                 visit_node(node->compound_info.statements[i]);
             }
+            break;
+        }
+        case N_RETURN: {
+            user_function_ret_val = visit_node(node->return_info.value);
+            user_function_returning = true;
             break;
         }
         default: {

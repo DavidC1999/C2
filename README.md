@@ -25,7 +25,6 @@ func main() {
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] Return values for functions (currently always implicitly 0)
 - [ ] Pointers
 - [ ] Arrays
 - [ ] String literals

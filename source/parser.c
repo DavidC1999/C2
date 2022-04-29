@@ -336,6 +336,32 @@ static ParseNode* get_statement(TokenLL* tokens) {
         return result;
     }
 
+    // return statement
+    if (tokens->current->type == T_KEYWORD && tokens->current->number == K_RETURN) {
+        int line = tokens->current->line;
+        advance_token(tokens);
+
+        ParseNode* value;
+
+        if (tokens->current->type == T_SEMICOLON) {
+            value = malloc(sizeof(ParseNode));
+            value->type = N_NUMBER;
+            value->number_info.value = 0;
+        } else {
+            value = get_expression(tokens);
+        }
+
+        ParseNode* result = malloc(sizeof(ParseNode));
+        result->type = N_RETURN;
+        result->line = line;
+        result->return_info.value = value;
+
+        expect_token_type(tokens, T_SEMICOLON);
+        advance_token(tokens);
+
+        return result;
+    }
+
     ParseNode* result = get_expression(tokens);
     expect_token_type(tokens, T_SEMICOLON);
     advance_token(tokens);
@@ -525,6 +551,9 @@ void free_AST(ParseNode* node) {
             free(node->compound_info.statements);
 
             break;
+        case N_RETURN:
+            free_AST(node->return_info.value);
+            break;
     }
     free(node);
 }
@@ -680,6 +709,9 @@ void print_AST(ParseNode* node, int indent) {
             print_AST(node->conditional_info.statement, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
+
+            print_indent(indent);
+            printf("}\n");
             break;
         }
         case N_COMPOUND: {
@@ -695,6 +727,14 @@ void print_AST(ParseNode* node, int indent) {
             print_indent(indent + 1);
             printf("]\n");
 
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
+        case N_RETURN: {
+            print_indent(indent);
+            printf("Return {\n");
+            print_AST(node->return_info.value, indent + 1);
             print_indent(indent);
             printf("}\n");
             break;

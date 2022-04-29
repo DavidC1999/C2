@@ -1,7 +1,7 @@
 var i = 0;
 
-func addToI(num) {
-	i = i + num;
+func add(original, num) {
+	return original + num;
 }
 
 // The main function will be called automatically
@@ -10,7 +10,6 @@ func main() {
 	
 	while(i < max) {
 		print(i);
-
-		addToI(10 / 10);
+		i = add(i, 3);
 	}
 }

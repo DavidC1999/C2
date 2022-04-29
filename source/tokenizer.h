@@ -49,6 +49,7 @@ enum KeywordTypes {
     K_VAR,
     K_IF,
     K_WHILE,
+    K_RETURN,
 };
 
 extern char* keyword_type_to_name[];

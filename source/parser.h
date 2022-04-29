@@ -20,6 +20,7 @@ enum ParseNodeTypes {
     N_IF,
     N_WHILE,
     N_COMPOUND,
+    N_RETURN,
 };
 
 enum BinOpNodeType {
@@ -91,6 +92,10 @@ typedef struct CompoundStatement {
     ParseNode** statements;
 } CompoundStatement;
 
+typedef struct ReturnStatement {
+    ParseNode* value;
+} ReturnStatement;
+
 struct ParseNode {
     enum ParseNodeTypes type;
     int line;
@@ -105,6 +110,7 @@ struct ParseNode {
         VariableNode variable_info;
         ConditionalNode conditional_info;
         CompoundStatement compound_info;
+        ReturnStatement return_info;
     };
 };
 
