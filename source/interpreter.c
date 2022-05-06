@@ -210,10 +210,21 @@ static int64_t call_func(ParseNode* call_node) {
             panic(buffer, call_node->line);
         }
 
+        if (user_func->param_count > MAX_PARAMS_PER_FUNC) {
+            panic("Too many parameters passed for function call", call_node->line);
+        }
+
+        // determine values to pass before creating scope in order to allow users to use parameters in the current scope
+        int64_t params_to_pass[MAX_PARAMS_PER_FUNC];
+
+        for (int64_t i = 0; i < user_func->param_count; ++i) {
+            params_to_pass[i] = visit_node(call_node->func_call_info.params[i]);
+        }
+
         var_scope_append();
 
         for (int64_t i = 0; i < user_func->param_count; ++i) {
-            var_define_manual(user_func->params[i], visit_node(call_node->func_call_info.params[i]), call_node->line);
+            var_define_manual(user_func->params[i], params_to_pass[i], call_node->line);
         }
 
         user_function_ret_val = 0;

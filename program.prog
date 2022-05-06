@@ -1,22 +1,19 @@
-var i = 0;
-var myVar;
-
 func add(original, num) {
 	return original + num;
 }
 
+func isDivByThree(num) {
+	return (num / 3 * 3) == num;
+}
+
 // The main function will be called automatically
 func main() {
-	// var max = input_num();
-	var max = 0;
-	
-	while(i < max) {
-		print(i);
-		i = add(i, 3);
+	var i = 0;
+
+	while(i < 100) {
+		if(isDivByThree(i)) {
+			print(i);
+		}
+		i = i + 1;
 	}
-
-	myVar = 10;
-	i = &myVar;
-
-	print(@(i - 1 + 1));
 }
