@@ -160,13 +160,24 @@ static ParseNode* get_factor(TokenLL* tokens) {
             int64_t line = tokens->current->line;
             advance_token(tokens);
 
-            ParseNode* operand = get_expression(tokens);
+            ParseNode* to_deref = get_expression(tokens);
 
             ParseNode* result = malloc(sizeof(ParseNode));
-            result->type = N_UN_OP;
-            result->line = line;
-            result->un_operation_info.type = UNOP_DEREF;
-            result->un_operation_info.operand = operand;
+
+            if (tokens->current->type == T_ASSIGN) {
+                advance_token(tokens);
+
+                result->type = N_PTR_ASSIGN;
+                result->line = line;
+                result->assign_ptr_info.addr = to_deref;
+                result->assign_ptr_info.value = get_expression(tokens);
+            } else {
+                result->type = N_UN_OP;
+                result->line = line;
+                result->un_operation_info.type = UNOP_DEREF;
+                result->un_operation_info.operand = to_deref;
+            }
+
             return result;
         }
         case T_AMPERSAND: {
@@ -581,6 +592,10 @@ void free_AST(ParseNode* node) {
 
             free(node->func_call_info.name);
             break;
+        case N_PTR_ASSIGN:
+            free_AST(node->assign_ptr_info.addr);
+            free_AST(node->assign_ptr_info.value);
+            break;
         case N_VAR_ASSIGN:
             free(node->assign_info.name);
             free(node->assign_info.value);
@@ -700,6 +715,26 @@ void print_AST(ParseNode* node, int64_t indent) {
                 print_AST(node->func_call_info.params[i], indent + 2);
             print_indent(indent + 1);
             printf("]\n");
+
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
+        case N_PTR_ASSIGN: {
+            print_indent(indent);
+            printf("Pointer assignment {\n");
+
+            print_indent(indent + 1);
+            printf("Address {\n");
+            print_AST(node->assign_ptr_info.addr, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
+
+            print_indent(indent + 1);
+            printf("Value {\n");
+            print_AST(node->assign_ptr_info.value, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
 
             print_indent(indent);
             printf("}\n");

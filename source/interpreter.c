@@ -279,6 +279,12 @@ static int64_t visit_node(ParseNode* node) {
             return call_func(node);
             break;
         }
+        case N_PTR_ASSIGN: {
+            int64_t* addr = (int64_t*)visit_node(node->assign_ptr_info.addr);
+            int64_t val = visit_node(node->assign_ptr_info.value);
+            *addr = val;
+            break;
+        }
         case N_VAR_ASSIGN: {
             var_set(node);
             break;
@@ -321,9 +327,6 @@ static int64_t visit_node(ParseNode* node) {
                     if (node->un_operation_info.operand->type != N_VARIABLE)
                         panic("Address-of operator expects a variable", node->line);
                     int64_t* addr = var_get_addr(node->un_operation_info.operand);
-                    printf("Addr of var %s is %p\n",
-                           node->un_operation_info.operand->variable_info.name,
-                           (int64_t*)addr);
                     return (int64_t)addr;
             }
             break;

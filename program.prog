@@ -1,19 +1,10 @@
-func add(original, num) {
-	return original + num;
-}
-
-func isDivByThree(num) {
-	return (num / 3 * 3) == num;
+func changeThis(ptr, num) {
+	@ptr = num;
 }
 
 // The main function will be called automatically
 func main() {
 	var i = 0;
-
-	while(i < 100) {
-		if(isDivByThree(i)) {
-			print(i);
-		}
-		i = i + 1;
-	}
+	changeThis(&i, 5);
+	print(i);
 }

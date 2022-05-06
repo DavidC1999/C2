@@ -14,6 +14,7 @@ enum ParseNodeTypes {
     N_FUNC_DEF,
     N_VAR_DEF,
     N_FUNC_CALL,
+    N_PTR_ASSIGN,
     N_VAR_ASSIGN,
     N_BIN_OP,
     N_UN_OP,
@@ -71,6 +72,11 @@ typedef struct FuncCallNode {
     ParseNode** params;
 } FuncCallNode;
 
+typedef struct AssignPtrNode {
+    ParseNode* addr;
+    ParseNode* value;
+} AssignPtrNode;
+
 typedef struct AssignNode {
     char* name;
     ParseNode* value;
@@ -117,6 +123,7 @@ struct ParseNode {
         RootNode root_info;
         FuncDefNode func_def_info;
         VarDefNode var_def_info;
+        AssignPtrNode assign_ptr_info;
         AssignNode assign_info;
         FuncCallNode func_call_info;
         BinOpNode bin_operation_info;
