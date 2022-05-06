@@ -2,6 +2,7 @@
 #define _PARSER_H
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "tokenizer.h"
 
@@ -38,6 +39,8 @@ enum BinOpNodeType {
 
 enum UnOpNodeType {
     UNOP_NEGATE,
+    UNOP_DEREF,
+    UNOP_GET_ADDR,
 };
 
 extern char* bin_op_node_type_to_string[];
@@ -46,7 +49,7 @@ extern char* un_op_node_type_to_string[];
 typedef struct ParseNode ParseNode;
 
 typedef struct RootNode {
-    int count;
+    int64_t count;
     ParseNode** definitions;
 } RootNode;
 
@@ -64,7 +67,7 @@ typedef struct VarDefNode {
 
 typedef struct FuncCallNode {
     char* name;
-    int param_count;
+    int64_t param_count;
     ParseNode** params;
 } FuncCallNode;
 
@@ -85,7 +88,7 @@ typedef struct UnOpNode {
 } UnOpNode;
 
 typedef struct NumberNode {
-    int value;
+    int64_t value;
 } NumberNode;
 
 typedef struct VariableNode {
@@ -109,7 +112,7 @@ typedef struct ReturnStatement {
 
 struct ParseNode {
     enum ParseNodeTypes type;
-    int line;
+    int64_t line;
     union {
         RootNode root_info;
         FuncDefNode func_def_info;
@@ -127,7 +130,7 @@ struct ParseNode {
 };
 
 ParseNode* parse(TokenLL* tokens);
-void print_AST(ParseNode* node, int indent);
+void print_AST(ParseNode* node, int64_t indent);
 void free_AST(ParseNode* node);
 
 #endif  // _PARSER_H

@@ -1,17 +1,18 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "interpreter.h"
 
-int builtin_print(builtin_panic_func_t panic, int count, int* params) {
+int64_t builtin_print(builtin_panic_func_t panic, int64_t count, int64_t* params) {
     if (count != 1) panic("Expected exactly 1 parameter");
 
-    printf("%d\n", params[0]);
+    printf("%ld\n", params[0]);
 
     return 0;
 }
 
-int builtin_putc(builtin_panic_func_t panic, int count, int* params) {
+int64_t builtin_putc(builtin_panic_func_t panic, int64_t count, int64_t* params) {
     if (count != 1) panic("Expected exactly 1 parameter");
 
     printf("%c", (char)params[0]);
@@ -19,7 +20,7 @@ int builtin_putc(builtin_panic_func_t panic, int count, int* params) {
     return 0;
 }
 
-int builtin_input_num(builtin_panic_func_t panic, int count, int* params) {
+int64_t builtin_input_num(builtin_panic_func_t panic, int64_t count, int64_t* params) {
     if (count != 0) panic("Expected exactly 0 parameters");
     (void)params;
 

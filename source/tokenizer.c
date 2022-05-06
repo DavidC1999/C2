@@ -31,6 +31,8 @@ char* token_type_to_name[] = {
     "T_LEQUAL",
     "T_EQUAL",
     "T_COMMA",
+    "T_AMPERSAND",
+    "T_AT",
 };
 
 char* keyword_type_to_name[] = {
@@ -186,6 +188,12 @@ void tokenize(char* text, TokenLL** result) {
         } else if (*text == '*') {
             append_token(*result, T_ASTERISK, NULL);
             ++text;
+        } else if (*text == '@') {
+            append_token(*result, T_AT, NULL);
+            ++text;
+        } else if (*text == '&') {
+            append_token(*result, T_AMPERSAND, NULL);
+            ++text;
         } else if (*text == '/') {
             ++text;
             if (*text == '/') {
@@ -290,6 +298,12 @@ void print_tokens(Token* node) {
             break;
         case T_GEQUAL:
             printf("'>=' -> ");
+            break;
+        case T_AMPERSAND:
+            printf("'&' -> ");
+            break;
+        case T_AT:
+            printf("'@' -> ");
             break;
     }
     print_tokens(node->next);

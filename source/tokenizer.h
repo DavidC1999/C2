@@ -40,6 +40,8 @@ enum TokenTypes {
     T_LEQUAL,
     T_EQUAL,
     T_COMMA,
+    T_AMPERSAND,
+    T_AT,
 };
 
 extern char* token_type_to_name[];
