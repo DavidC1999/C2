@@ -16,4 +16,5 @@ I think we can all agree one of the greatest shortcomings of C is the wild west 
 More or less in order of priority:
 - [ ] Arrays
 - [ ] String literals
+- [ ] else statements
 - [ ] Boolean operators higher precendence than arithmetic operators

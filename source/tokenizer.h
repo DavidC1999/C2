@@ -3,6 +3,8 @@
 
 #include <stddef.h>
 
+#define MAX_IDENTIFIER_LENGTH 1000
+
 typedef struct Token {
     int type;
     struct Token* next;
@@ -28,6 +30,8 @@ enum TokenTypes {
     T_RPAREN,
     T_LBRACE,
     T_RBRACE,
+    T_LSQUARE,
+    T_RSQUARE,
     T_SEMICOLON,
     T_ASSIGN,
     T_PLUS,

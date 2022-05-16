@@ -1,5 +1,3 @@
-#define MAX_IDENTIFIER_LENGTH 1000
-
 #include "tokenizer.h"
 
 #include <stdio.h>
@@ -19,6 +17,8 @@ char* token_type_to_name[] = {
     "T_RPAREN",
     "T_LBRACE",
     "T_RBRACE",
+    "T_LSQUARE",
+    "T_RSQUARE",
     "T_SEMICOLON",
     "T_ASSIGN",
     "T_PLUS",
@@ -165,6 +165,12 @@ void tokenize(char* text, TokenLL** result) {
         } else if (*text == '}') {
             append_token(*result, T_RBRACE, NULL);
             ++text;
+        } else if (*text == '[') {
+            append_token(*result, T_LSQUARE, NULL);
+            ++text;
+        } else if (*text == ']') {
+            append_token(*result, T_RSQUARE, NULL);
+            ++text;
         } else if (*text == ';') {
             append_token(*result, T_SEMICOLON, NULL);
             ++text;
@@ -265,6 +271,12 @@ void print_tokens(Token* node) {
             break;
         case T_RBRACE:
             printf("'}' -> ");
+            break;
+        case T_LSQUARE:
+            printf("'[' -> ");
+            break;
+        case T_RSQUARE:
+            printf("']' -> ");
             break;
         case T_SEMICOLON:
             printf("';' -> ");

@@ -9,6 +9,7 @@
 #include "builtin_functions.h"
 #include "hashtable/hashtable.h"
 #include "parser.h"
+#include "tokenizer.h"
 
 #define MAX_USER_FUNCTIONS 100
 #define MAX_BUILTIN_FUNCTIONS 100
@@ -95,7 +96,7 @@ static int64_t var_get(ParseNode* node) {
     return *var_get_addr(node);
 }
 
-static void var_define_manual(char* name, int64_t value, int64_t line) {
+static void var_insert_ptr(char* name, int64_t* ptr, int64_t line) {
     HashEntry _;
 
     if (curr_scope == -1) {
@@ -104,9 +105,7 @@ static void var_define_manual(char* name, int64_t value, int64_t line) {
             snprintf(buffer, 100, "Variable with name '%s' already exists", name);
             panic(buffer, line);
         }
-        int64_t* var = malloc(sizeof(int64_t));
-        *var = value;
-        hashtable_set(global_variables, name, var);
+        hashtable_set(global_variables, name, ptr);
         return;
     }
 
@@ -117,9 +116,13 @@ static void var_define_manual(char* name, int64_t value, int64_t line) {
         panic(buffer, line);
     }
 
-    int64_t* var = malloc(sizeof(int64_t));
-    *var = value;
-    hashtable_set(current, name, var);
+    hashtable_set(current, name, ptr);
+}
+
+static void var_define_manual(char* name, int64_t value, int64_t line) {
+    int64_t* ptr = malloc(sizeof(int64_t));
+    *ptr = value;
+    var_insert_ptr(name, ptr, line);
 }
 
 static void var_define(ParseNode* node) {
@@ -273,6 +276,20 @@ static int64_t visit_node(ParseNode* node) {
         }
         case N_VAR_DEF: {
             var_define(node);
+            break;
+        }
+        case N_ARR_DEF: {
+            int64_t size = visit_node(node->arr_def_info.size);
+            int64_t* ptr = calloc(size, sizeof(int64_t));
+
+            // Put the pointer into the hastable to automatically free it on deletion of the scope
+            // use a '$' because this is not recognized by the tokenizer and can never be a user variable
+            char name[MAX_IDENTIFIER_LENGTH];
+            snprintf(name, MAX_IDENTIFIER_LENGTH, "$arr_%s", node->arr_def_info.name);
+            var_insert_ptr(name, ptr, node->line);
+
+            // define the array name to point to the array
+            var_define_manual(node->arr_def_info.name, (int64_t)ptr, node->line);
             break;
         }
         case N_FUNC_CALL: {

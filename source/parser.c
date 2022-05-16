@@ -112,20 +112,21 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
     switch (tokens->current->type) {
         case T_IDENTIFIER: {
+            int64_t line = tokens->current->line;
             if (tokens->current->next != NULL && tokens->current->next->type == T_LPAREN)
                 return get_function_call(tokens);
 
-            // it's not a function call so it must be a variable
             size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
             char* name = malloc(sizeof(char) * str_length);
             strncpy(name, tokens->current->name, str_length);
 
+            advance_token(tokens);
+
             ParseNode* result = malloc(sizeof(ParseNode*));
             result->type = N_VARIABLE;
-            result->line = tokens->current->line;
+            result->line = line;
             result->variable_info.name = name;
 
-            advance_token(tokens);
             return result;
         }
         case T_NUMBER: {
@@ -506,20 +507,24 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
     identifier_name[identifier_len] = '\0';
     advance_token(tokens);
 
-    ParseNode* initial_val = NULL;
+    ParseNode* result = malloc(sizeof(ParseNode));
+    result->line = line;
     if (tokens->current->type == T_ASSIGN) {
         advance_token(tokens);
-        initial_val = get_expression(tokens);
+        result->type = N_VAR_DEF;
+        result->var_def_info.name = identifier_name;
+        result->var_def_info.initial_val = get_expression(tokens);
+    } else if (tokens->current->type == T_LSQUARE) {
+        advance_token(tokens);
+        result->type = N_ARR_DEF;
+        result->arr_def_info.name = identifier_name;
+        result->arr_def_info.size = get_expression(tokens);
+        expect_token_type(tokens, T_RSQUARE);
+        advance_token(tokens);
     }
 
     expect_token_type(tokens, T_SEMICOLON);
     advance_token(tokens);
-
-    ParseNode* result = malloc(sizeof(ParseNode));
-    result->type = N_VAR_DEF;
-    result->line = line;
-    result->var_def_info.name = identifier_name;
-    result->var_def_info.initial_val = initial_val;
 
     return result;
 }
@@ -583,6 +588,11 @@ void free_AST(ParseNode* node) {
             break;
         case N_VAR_DEF:
             free(node->var_def_info.name);
+            free(node->var_def_info.initial_val);
+            break;
+        case N_ARR_DEF:
+            free(node->arr_def_info.name);
+            free(node->arr_def_info.size);
             break;
         case N_FUNC_CALL:
             for (int64_t i = 0; i < node->func_call_info.param_count; ++i) {
@@ -698,6 +708,23 @@ void print_AST(ParseNode* node, int64_t indent) {
                 print_indent(indent + 1);
                 printf("}\n");
             }
+
+            print_indent(indent);
+            printf("}\n");
+            break;
+        }
+        case N_ARR_DEF: {
+            print_indent(indent);
+            printf("Array definition {\n");
+
+            print_indent(indent + 1);
+            printf("Identifier: %s\n", node->arr_def_info.name);
+
+            print_indent(indent + 1);
+            printf("Size {\n");
+            print_AST(node->arr_def_info.size, indent + 2);
+            print_indent(indent + 1);
+            printf("}\n");
 
             print_indent(indent);
             printf("}\n");
