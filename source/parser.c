@@ -509,18 +509,21 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
 
     ParseNode* result = malloc(sizeof(ParseNode));
     result->line = line;
-    if (tokens->current->type == T_ASSIGN) {
-        advance_token(tokens);
-        result->type = N_VAR_DEF;
-        result->var_def_info.name = identifier_name;
-        result->var_def_info.initial_val = get_expression(tokens);
-    } else if (tokens->current->type == T_LSQUARE) {
+    if (tokens->current->type == T_LSQUARE) {
         advance_token(tokens);
         result->type = N_ARR_DEF;
         result->arr_def_info.name = identifier_name;
         result->arr_def_info.size = get_expression(tokens);
         expect_token_type(tokens, T_RSQUARE);
         advance_token(tokens);
+    } else {
+        result->type = N_VAR_DEF;
+        result->var_def_info.name = identifier_name;
+        if (tokens->current->type == T_ASSIGN) {
+            result->var_def_info.initial_val = get_expression(tokens);
+        } else {
+            result->var_def_info.initial_val = NULL;
+        }
     }
 
     expect_token_type(tokens, T_SEMICOLON);
