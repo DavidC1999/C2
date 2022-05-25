@@ -139,7 +139,7 @@ static void var_define(ParseNode* node) {
     var_define_manual(node->var_def_info.name, initial_value, node->line);
 }
 
-static void var_set(ParseNode* node) {
+static int64_t var_set(ParseNode* node) {
     if (node == NULL || node->type != N_VAR_ASSIGN) {
         char* error = "Trying to set variable value of non-variable node (this is an internal interpreter error)";
         if (node == NULL)
@@ -151,22 +151,24 @@ static void var_set(ParseNode* node) {
     HashEntry entry;
     HashTable* current = var_scope_get_current();
     if (hashtable_get(current, &entry, node->assign_info.name)) {
-        // hashtable_set(current, node->assign_info.name, visit_node(node->assign_info.value));
         int64_t* ptr = (int64_t*)entry.value;
-        *ptr = visit_node(node->assign_info.value);
-        return;
+        int64_t val = visit_node(node->assign_info.value);
+        *ptr = val;
+        return val;
     }
 
     if (hashtable_get(global_variables, &entry, node->assign_info.name)) {
-        // hashtable_set(global_variables, node->assign_info.name, visit_node(node->assign_info.value));
         int64_t* ptr = (int64_t*)entry.value;
-        *ptr = visit_node(node->assign_info.value);
-        return;
+        int64_t val = visit_node(node->assign_info.value);
+        *ptr = val;
+        return val;
     }
 
     char buffer[100];
     snprintf(buffer, 100, "Trying to assign to unknown variable: %s", node->assign_info.name);
     panic(buffer, node->line);
+
+    return 0;
 }
 
 static void init_funcs() {
@@ -300,11 +302,10 @@ static int64_t visit_node(ParseNode* node) {
             int64_t* addr = (int64_t*)visit_node(node->assign_ptr_info.addr);
             int64_t val = visit_node(node->assign_ptr_info.value);
             *addr = val;
-            break;
+            return val;
         }
         case N_VAR_ASSIGN: {
-            var_set(node);
-            break;
+            return var_set(node);
         }
         case N_BIN_OP: {
             int64_t left = visit_node(node->bin_operation_info.left);

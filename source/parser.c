@@ -59,6 +59,7 @@ static void expect_keyword(TokenLL* tokens, int64_t expected_keyword) {
 }
 
 static ParseNode* get_expression(TokenLL* tokens);
+static ParseNode* get_variable_definition(TokenLL* tokens);
 
 static ParseNode* get_function_call(TokenLL* tokens) {
     expect_token_type(tokens, T_IDENTIFIER);
@@ -110,101 +111,127 @@ static ParseNode* get_factor(TokenLL* tokens) {
         panic("unexpected end of token stream", tokens->tail->line);
     }
 
-    switch (tokens->current->type) {
-        case T_IDENTIFIER: {
-            int64_t line = tokens->current->line;
-            if (tokens->current->next != NULL && tokens->current->next->type == T_LPAREN)
-                return get_function_call(tokens);
+    // variable assignment
+    if (tokens->current->type == T_IDENTIFIER && tokens->current->next->type == T_ASSIGN) {
+        size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
+        char* name = malloc(sizeof(char) * str_length);
+        strncpy(name, tokens->current->name, str_length);
 
-            size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
-            char* name = malloc(sizeof(char) * str_length);
-            strncpy(name, tokens->current->name, str_length);
+        advance_token(tokens);
+        int64_t line = tokens->current->line;
 
+        advance_token(tokens);
+
+        ParseNode* value = get_expression(tokens);
+
+        ParseNode* result = malloc(sizeof(ParseNode));
+
+        result->type = N_VAR_ASSIGN;
+        result->line = line;
+        result->assign_info.name = name;
+        result->assign_info.value = value;
+
+        return result;
+    }
+
+    if (tokens->current->type == T_IDENTIFIER) {
+        int64_t line = tokens->current->line;
+        if (tokens->current->next != NULL && tokens->current->next->type == T_LPAREN)
+            return get_function_call(tokens);
+
+        size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
+        char* name = malloc(sizeof(char) * str_length);
+        strncpy(name, tokens->current->name, str_length);
+
+        advance_token(tokens);
+
+        ParseNode* result = malloc(sizeof(ParseNode*));
+        result->type = N_VARIABLE;
+        result->line = line;
+        result->variable_info.name = name;
+
+        return result;
+    }
+
+    if (tokens->current->type == T_NUMBER) {
+        ParseNode* result = malloc(sizeof(ParseNode));
+        result->type = N_NUMBER;
+        result->line = tokens->current->line;
+        result->number_info.value = tokens->current->number;
+        advance_token(tokens);
+        return result;
+    }
+
+    if (tokens->current->type == T_LPAREN) {
+        advance_token(tokens);
+        ParseNode* result = get_expression(tokens);
+        expect_token_type(tokens, T_RPAREN);
+        advance_token(tokens);
+        return result;
+    }
+
+    if (tokens->current->type == T_MINUS) {
+        int64_t line = tokens->current->line;
+        advance_token(tokens);
+
+        ParseNode* operand = get_expression(tokens);
+
+        ParseNode* result = malloc(sizeof(ParseNode));
+        result->type = N_UN_OP;
+        result->line = line;
+        result->un_operation_info.type = UNOP_NEGATE;
+        result->un_operation_info.operand = operand;
+        return result;
+    }
+
+    if (tokens->current->type == T_AT) {
+        int64_t line = tokens->current->line;
+        advance_token(tokens);
+
+        ParseNode* to_deref = get_expression(tokens);
+
+        ParseNode* result = malloc(sizeof(ParseNode));
+
+        if (tokens->current->type == T_ASSIGN) {
             advance_token(tokens);
 
-            ParseNode* result = malloc(sizeof(ParseNode*));
-            result->type = N_VARIABLE;
+            result->type = N_PTR_ASSIGN;
             result->line = line;
-            result->variable_info.name = name;
-
-            return result;
-        }
-        case T_NUMBER: {
-            ParseNode* result = malloc(sizeof(ParseNode));
-            result->type = N_NUMBER;
-            result->line = tokens->current->line;
-            result->number_info.value = tokens->current->number;
-            advance_token(tokens);
-            return result;
-        }
-        case T_LPAREN: {
-            advance_token(tokens);
-            ParseNode* result = get_expression(tokens);
-            expect_token_type(tokens, T_RPAREN);
-            advance_token(tokens);
-            return result;
-        }
-        case T_MINUS: {
-            int64_t line = tokens->current->line;
-            advance_token(tokens);
-
-            ParseNode* operand = get_expression(tokens);
-
-            ParseNode* result = malloc(sizeof(ParseNode));
+            result->assign_ptr_info.addr = to_deref;
+            result->assign_ptr_info.value = get_expression(tokens);
+        } else {
             result->type = N_UN_OP;
             result->line = line;
-            result->un_operation_info.type = UNOP_NEGATE;
-            result->un_operation_info.operand = operand;
-            return result;
+            result->un_operation_info.type = UNOP_DEREF;
+            result->un_operation_info.operand = to_deref;
         }
-        case T_AT: {
-            int64_t line = tokens->current->line;
-            advance_token(tokens);
 
-            ParseNode* to_deref = get_expression(tokens);
+        return result;
+    }
 
-            ParseNode* result = malloc(sizeof(ParseNode));
+    if (tokens->current->type == T_AMPERSAND) {
+        int64_t line = tokens->current->line;
+        advance_token(tokens);
 
-            if (tokens->current->type == T_ASSIGN) {
-                advance_token(tokens);
+        expect_token_type(tokens, T_IDENTIFIER);
 
-                result->type = N_PTR_ASSIGN;
-                result->line = line;
-                result->assign_ptr_info.addr = to_deref;
-                result->assign_ptr_info.value = get_expression(tokens);
-            } else {
-                result->type = N_UN_OP;
-                result->line = line;
-                result->un_operation_info.type = UNOP_DEREF;
-                result->un_operation_info.operand = to_deref;
-            }
+        size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
+        char* name = malloc(sizeof(char) * str_length);
+        strncpy(name, tokens->current->name, str_length);
 
-            return result;
-        }
-        case T_AMPERSAND: {
-            int64_t line = tokens->current->line;
-            advance_token(tokens);
+        ParseNode* operand = malloc(sizeof(ParseNode*));
+        operand->type = N_VARIABLE;
+        operand->line = tokens->current->line;
+        operand->variable_info.name = name;
 
-            expect_token_type(tokens, T_IDENTIFIER);
+        advance_token(tokens);
 
-            size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
-            char* name = malloc(sizeof(char) * str_length);
-            strncpy(name, tokens->current->name, str_length);
-
-            ParseNode* operand = malloc(sizeof(ParseNode*));
-            operand->type = N_VARIABLE;
-            operand->line = tokens->current->line;
-            operand->variable_info.name = name;
-
-            advance_token(tokens);
-
-            ParseNode* result = malloc(sizeof(ParseNode));
-            result->type = N_UN_OP;
-            result->line = line;
-            result->un_operation_info.type = UNOP_GET_ADDR;
-            result->un_operation_info.operand = operand;
-            return result;
-        }
+        ParseNode* result = malloc(sizeof(ParseNode));
+        result->type = N_UN_OP;
+        result->line = line;
+        result->un_operation_info.type = UNOP_GET_ADDR;
+        result->un_operation_info.operand = operand;
+        return result;
     }
 
     char buffer[200];
@@ -308,8 +335,6 @@ static ParseNode* get_expression(TokenLL* tokens) {
     return result;
 }
 
-static ParseNode* get_variable_definition(TokenLL* tokens);
-
 static ParseNode* get_statement(TokenLL* tokens) {
     if (tokens->current == NULL) {
         panic("unexpected end of token stream", tokens->tail->line);
@@ -318,32 +343,6 @@ static ParseNode* get_statement(TokenLL* tokens) {
     // variable definition
     if (tokens->current->type == T_KEYWORD && tokens->current->number == K_VAR) {
         return get_variable_definition(tokens);
-    }
-
-    // variable assignment
-    if (tokens->current->type == T_IDENTIFIER && tokens->current->next->type == T_ASSIGN) {
-        size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
-        char* name = malloc(sizeof(char) * str_length);
-        strncpy(name, tokens->current->name, str_length);
-
-        advance_token(tokens);
-        int64_t line = tokens->current->line;
-
-        advance_token(tokens);
-
-        ParseNode* value = get_expression(tokens);
-
-        ParseNode* result = malloc(sizeof(ParseNode));
-
-        result->type = N_VAR_ASSIGN;
-        result->line = line;
-        result->assign_info.name = name;
-        result->assign_info.value = value;
-
-        expect_token_type(tokens, T_SEMICOLON);
-        advance_token(tokens);
-
-        return result;
     }
 
     // if statement & while loop
