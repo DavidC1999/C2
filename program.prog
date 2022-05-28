@@ -5,15 +5,13 @@ func main() {
 	var i = 0;
 
 	while(i < 10) {
-		@(list + i * 8) = i;
-		// list[i] = i;
+		list[i] = i;
 		i = i + 1;
 	}
 
 	i = 0;
 	while(i < 10) {
-		print(@(list + i * 8));
-		// print(list[i]);
+		print(list[i]);
 		i = i + 1;
 	}
 }

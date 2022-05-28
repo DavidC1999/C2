@@ -14,7 +14,5 @@ I think we can all agree one of the greatest shortcomings of C is the wild west 
 
 ## TO DO LIST
 More or less in order of priority:
-- [ ] Arrays
 - [ ] String literals
 - [ ] else statements
-- [ ] Boolean operators higher precendence than arithmetic operators

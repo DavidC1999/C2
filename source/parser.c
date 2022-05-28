@@ -106,32 +106,99 @@ static ParseNode* get_function_call(TokenLL* tokens) {
     return result;
 }
 
+static ParseNode* get_arr_addr_calculation(char* arr_name, ParseNode* index, int64_t line) {
+    // example: "list[3] = 5" is exactly equivalent to "@(list + 3 * 8) = 5"
+    // below, we build up the tree for calculating "list + 3 * 8"
+    ParseNode* result = malloc(sizeof(ParseNode));
+    result->line = line;
+    result->type = N_BIN_OP;
+    result->bin_operation_info.type = BINOP_ADD;
+
+    result->bin_operation_info.left = malloc(sizeof(ParseNode));
+    result->bin_operation_info.left->line = line;
+    result->bin_operation_info.left->type = N_VARIABLE;
+    result->bin_operation_info.left->variable_info.name = arr_name;
+
+    result->bin_operation_info.right = malloc(sizeof(ParseNode));
+    result->bin_operation_info.right->line = line;
+    result->bin_operation_info.right->type = N_BIN_OP;
+    result->bin_operation_info.right->bin_operation_info.type = BINOP_MUL;
+    result->bin_operation_info.right->bin_operation_info.left = index;
+
+    result->bin_operation_info.right->bin_operation_info.right = malloc(sizeof(ParseNode));
+    result->bin_operation_info.right->bin_operation_info.right->line = line;
+    result->bin_operation_info.right->bin_operation_info.right->type = N_NUMBER;
+    result->bin_operation_info.right->bin_operation_info.right->number_info.value = 8;
+
+    return result;
+}
+
 static ParseNode* get_factor(TokenLL* tokens) {
     if (tokens->current == NULL) {
         panic("unexpected end of token stream", tokens->tail->line);
     }
 
-    // variable assignment
-    if (tokens->current->type == T_IDENTIFIER && tokens->current->next->type == T_ASSIGN) {
+    if (tokens->current->type == T_IDENTIFIER) {
+        int64_t line = tokens->current->line;  // store the line number of the identifier for possible later use
+
         size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
         strncpy(name, tokens->current->name, str_length);
 
-        advance_token(tokens);
-        int64_t line = tokens->current->line;
+        // array access or assignment
+        if (tokens->current->next->type == T_LSQUARE) {
+            advance_token(tokens);  // move to left square
+            advance_token(tokens);  // move past left square
 
-        advance_token(tokens);
+            ParseNode* result = malloc(sizeof(ParseNode));
 
-        ParseNode* value = get_expression(tokens);
+            ParseNode* index = get_expression(tokens);
 
-        ParseNode* result = malloc(sizeof(ParseNode));
+            expect_token_type(tokens, T_RSQUARE);
+            advance_token(tokens);
 
-        result->type = N_VAR_ASSIGN;
-        result->line = line;
-        result->assign_info.name = name;
-        result->assign_info.value = value;
+            if (tokens->current->type == T_ASSIGN) {  // assignment
+                line = tokens->current->line;         // override line number to assignment token instead of indentifier
+                advance_token(tokens);
 
-        return result;
+                ParseNode* value = get_expression(tokens);
+
+                // array assignment is implemented as syntactic sugar for pointer assignment
+                result->type = N_PTR_ASSIGN;
+                result->line = line;
+                result->assign_ptr_info.addr = get_arr_addr_calculation(name, index, line);
+                result->assign_ptr_info.value = value;
+
+                return result;
+            } else {  // access
+                result->type = N_UN_OP;
+                result->line = line;  // use array identfier line number as line number for node
+                result->un_operation_info.type = UNOP_DEREF;
+                result->un_operation_info.operand = get_arr_addr_calculation(name, index, line);
+                return result;
+            }
+        }
+
+        // var assignment
+        if (tokens->current->next->type == T_ASSIGN) {
+            advance_token(tokens);
+            int64_t line = tokens->current->line;
+
+            advance_token(tokens);
+
+            ParseNode* value = get_expression(tokens);
+
+            ParseNode* result = malloc(sizeof(ParseNode));
+
+            result->type = N_VAR_ASSIGN;
+            result->line = line;
+            result->assign_info.name = name;
+            result->assign_info.value = value;
+
+            return result;
+        }
+
+        free(name);
     }
 
     if (tokens->current->type == T_IDENTIFIER) {
@@ -235,10 +302,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
     }
 
     char buffer[200];
-    snprintf(buffer, 200, "Expected token of type [%s, %s, %s] but found %s instead",
-             token_type_to_name[T_IDENTIFIER],
-             token_type_to_name[T_NUMBER],
-             token_type_to_name[T_LPAREN],
+    snprintf(buffer, 200, "Unexpected token of type %s",
              token_type_to_name[tokens->current->type]);
 
     int64_t line = tokens->current == NULL ? tokens->tail->line : tokens->current->line;
