@@ -519,6 +519,7 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
         result->type = N_VAR_DEF;
         result->var_def_info.name = identifier_name;
         if (tokens->current->type == T_ASSIGN) {
+            advance_token(tokens);
             result->var_def_info.initial_val = get_expression(tokens);
         } else {
             result->var_def_info.initial_val = NULL;
