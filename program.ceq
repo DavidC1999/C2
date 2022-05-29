@@ -1,0 +1,4 @@
+// The main function will be called automatically
+func main() {
+	print(3 << 1 & 2);
+}

@@ -200,6 +200,9 @@ void tokenize(char* text, TokenLL** result) {
         } else if (*text == '&') {
             append_token(*result, T_AMPERSAND, NULL);
             ++text;
+        } else if (*text == '|') {
+            append_token(*result, T_PIPE, NULL);
+            ++text;
         } else if (*text == '/') {
             ++text;
             if (*text == '/') {
@@ -215,6 +218,9 @@ void tokenize(char* text, TokenLL** result) {
             if (*text != EOF && *text == '=') {
                 ++text;
                 append_token(*result, T_GEQUAL, NULL);
+            } else if (*text != EOF && *text == '>') {
+                ++text;
+                append_token(*result, T_DBL_GREATER, NULL);
             } else {
                 append_token(*result, T_GREATER, NULL);
             }
@@ -223,6 +229,9 @@ void tokenize(char* text, TokenLL** result) {
             if (*text != EOF && *text == '=') {
                 ++text;
                 append_token(*result, T_LEQUAL, NULL);
+            } else if (*text != EOF && *text == '<') {
+                ++text;
+                append_token(*result, T_DBL_LESS, NULL);
             } else {
                 append_token(*result, T_LESS, NULL);
             }
@@ -316,6 +325,15 @@ void print_tokens(Token* node) {
             break;
         case T_AT:
             printf("'@' -> ");
+            break;
+        case T_PIPE:
+            printf("'|' -> ");
+            break;
+        case T_DBL_GREATER:
+            printf("'>>' -> ");
+            break;
+        case T_DBL_LESS:
+            printf("'<<' -> ");
             break;
     }
     print_tokens(node->next);

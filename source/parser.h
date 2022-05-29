@@ -37,6 +37,10 @@ enum BinOpNodeType {
     BINOP_LEQUAL,
     BINOP_GREATER,
     BINOP_GEQUAL,
+    BINOP_BITAND,  //
+    BINOP_BITOR,
+    BINOP_SHLEFT,
+    BINOP_SHRIGHT,
 };
 
 enum UnOpNodeType {

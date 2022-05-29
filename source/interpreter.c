@@ -331,6 +331,14 @@ static int64_t visit_node(ParseNode* node) {
                     return left > right;
                 case BINOP_GEQUAL:
                     return left >= right;
+                case BINOP_BITAND:
+                    return left & right;
+                case BINOP_BITOR:
+                    return left | right;
+                case BINOP_SHLEFT:
+                    return left << right;
+                case BINOP_SHRIGHT:
+                    return left >> right;
             }
             break;
         }
