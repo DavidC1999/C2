@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
     // reading file:
     FILE* file = fopen(argv[1], "r");
     size_t file_size = get_file_size(file);
-    char* buffer = (char*)malloc(sizeof(char) * file_size);
+    char* buffer = (char*)malloc(sizeof(char) * file_size + 1);
 
     read_file(file, file_size, buffer);
 
