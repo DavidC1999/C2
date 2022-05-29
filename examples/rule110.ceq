@@ -1,0 +1,80 @@
+var rule = 110;
+
+var generationLength = 100;
+
+func packToNum(bit2, bit1, bit0) {
+    return (bit2 << 2) | (bit1 << 1) | (bit0);
+}
+
+func printGeneration(arrGeneration) {
+    var i = 0;
+    while(i < generationLength) {
+        if(arrGeneration[i] == 0) {
+            putc(32); // ' '
+        }
+        if(arrGeneration[i] == 1) {
+            putc(42); // '*'
+        }
+        i = i + 1;
+    }
+    putc(10); // '\n'
+}
+
+func safeIndexGeneration(generation, idx) {
+    if(idx < 0) {
+        return 0;
+    }
+
+    if(idx >= generationLength) {
+        return 0;
+    }
+
+    return generation[idx];
+}
+
+func getGenerationPatternAt(generation, idx) {
+    return packToNum(
+        safeIndexGeneration(generation, idx - 1),
+        safeIndexGeneration(generation, idx),
+        safeIndexGeneration(generation, idx + 1));
+}
+
+func getCellStateFromPattern(pattern) {
+    return (rule >> pattern) & 1; 
+}
+
+func nextGeneration(buffer, prevGeneration) {
+    var pattern;
+
+    var i = 0;
+    while(i < generationLength) {
+        pattern = getGenerationPatternAt(prevGeneration, i);
+        buffer[i] = getCellStateFromPattern(pattern);
+        i = i + 1;
+    }
+}
+
+func main() {
+    var temp;
+
+    var bucket0[generationLength];
+    var bucket1[generationLength];
+
+    var prevGeneration = bucket0;
+    var workingBuffer = bucket1;
+
+    prevGeneration[generationLength - 1] = 1;
+
+    var generationsLeft = generationLength;
+    while(generationsLeft > 0) {
+        printGeneration(prevGeneration);
+        
+        nextGeneration(workingBuffer, prevGeneration);
+
+        temp = prevGeneration;
+        prevGeneration = workingBuffer;
+        workingBuffer = temp;
+
+        generationsLeft = generationsLeft - 1;
+    }
+}
