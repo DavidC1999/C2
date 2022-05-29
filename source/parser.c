@@ -312,29 +312,21 @@ static ParseNode* get_factor(TokenLL* tokens) {
     return NULL;
 }
 
-static bool token_type_is_term_binop(TokenLL* tokens) {
-    return (tokens->current->type == T_ASTERISK ||
-            tokens->current->type == T_SLASH ||
-            tokens->current->type == T_EQUAL ||
+static bool token_type_is_term_binop_1(TokenLL* tokens) {
+    return (tokens->current->type == T_EQUAL ||
             tokens->current->type == T_LESS ||
             tokens->current->type == T_LEQUAL ||
             tokens->current->type == T_GREATER ||
             tokens->current->type == T_GEQUAL);
 }
 
-static ParseNode* get_term(TokenLL* tokens) {
+static ParseNode* get_term_1(TokenLL* tokens) {
     ParseNode* result = get_factor(tokens);
 
-    while (tokens->current != NULL && token_type_is_term_binop(tokens)) {
+    while (tokens->current != NULL && token_type_is_term_binop_1(tokens)) {
         enum BinOpNodeType type;
 
         switch (tokens->current->type) {
-            case T_ASTERISK:
-                type = BINOP_MUL;
-                break;
-            case T_SLASH:
-                type = BINOP_DIV;
-                break;
             case T_EQUAL:
                 type = BINOP_EQUAL;
                 break;
@@ -370,8 +362,37 @@ static ParseNode* get_term(TokenLL* tokens) {
     return result;
 }
 
+static ParseNode* get_term_0(TokenLL* tokens) {
+    ParseNode* result = get_term_1(tokens);
+
+    while (tokens->current != NULL && (tokens->current->type == T_ASTERISK || tokens->current->type == T_SLASH)) {
+        enum BinOpNodeType type;
+        if (tokens->current->type == T_ASTERISK) {
+            type = BINOP_MUL;
+        } else {  // tokens->current->type == T_SLASH
+            type = BINOP_DIV;
+        }
+
+        int64_t line = tokens->current->line;
+
+        advance_token(tokens);
+        ParseNode* rhs = get_term_1(tokens);
+
+        ParseNode* temp = malloc(sizeof(ParseNode));
+        temp->type = N_BIN_OP;
+        temp->line = line;
+        temp->bin_operation_info.type = type;
+        temp->bin_operation_info.left = result;
+        temp->bin_operation_info.right = rhs;
+
+        result = temp;
+    }
+
+    return result;
+}
+
 static ParseNode* get_expression(TokenLL* tokens) {
-    ParseNode* result = get_term(tokens);
+    ParseNode* result = get_term_0(tokens);
 
     while (tokens->current != NULL && (tokens->current->type == T_PLUS || tokens->current->type == T_MINUS)) {
         enum BinOpNodeType type;
@@ -384,7 +405,7 @@ static ParseNode* get_expression(TokenLL* tokens) {
         int64_t line = tokens->current->line;
 
         advance_token(tokens);
-        ParseNode* rhs = get_term(tokens);
+        ParseNode* rhs = get_term_0(tokens);
 
         ParseNode* temp = malloc(sizeof(ParseNode));
         temp->type = N_BIN_OP;
