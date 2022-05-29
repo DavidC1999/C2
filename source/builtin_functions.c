@@ -12,6 +12,14 @@ int64_t builtin_print(builtin_panic_func_t panic, int64_t count, int64_t* params
     return 0;
 }
 
+int64_t builtin_printu(builtin_panic_func_t panic, int64_t count, int64_t* params) {
+    if (count != 1) panic("Expected exactly 1 parameter");
+
+    printf("%lu\n", (uint64_t)(params[0]));
+
+    return 0;
+}
+
 int64_t builtin_putc(builtin_panic_func_t panic, int64_t count, int64_t* params) {
     if (count != 1) panic("Expected exactly 1 parameter");
 

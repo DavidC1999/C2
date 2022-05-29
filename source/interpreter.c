@@ -174,6 +174,7 @@ static int64_t var_set(ParseNode* node) {
 static void init_funcs() {
     builtin_functions = hashtable_new(ANY_T, MAX_BUILTIN_FUNCTIONS);
     hashtable_set(builtin_functions, "print", builtin_print);
+    hashtable_set(builtin_functions, "printu", builtin_printu);
     hashtable_set(builtin_functions, "putc", builtin_putc);
     hashtable_set(builtin_functions, "input_num", builtin_input_num);
 
