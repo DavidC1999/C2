@@ -7,5 +7,6 @@ bool is_number(char c) {
 bool is_identifier_char(char c) {
     return (c >= 'A' && c <= 'Z') ||
            (c >= 'a' && c <= 'z') ||
+           (c >= '0' && c <= '9') ||
            c == '_';
 }
