@@ -259,7 +259,28 @@ static ParseNode* get_factor(TokenLL* tokens) {
         int64_t line = tokens->current->line;
         advance_token(tokens);
 
-        ParseNode* to_deref = get_expression(tokens);
+        ParseNode* to_deref;
+        if (tokens->current->type == T_LPAREN) {  // Allow dereference with pointer arithmetic within parenthesis
+            to_deref = get_expression(tokens);
+        } else {  // No parenthesis, expect a variable
+            /*
+                This is to avoid a scenario like @a = 10
+                To be interpreted as @(a = 10)
+                Instead of @(a) = 10
+             */
+            expect_token_type(tokens, T_IDENTIFIER);
+
+            size_t str_length = strlen(tokens->current->name) + 1;  // including '\0'
+            char* name = malloc(sizeof(char) * str_length);
+            strncpy(name, tokens->current->name, str_length);
+
+            to_deref = malloc(sizeof(ParseNode*));
+            to_deref->type = N_VARIABLE;
+            to_deref->line = tokens->current->line;
+            to_deref->variable_info.name = name;
+
+            advance_token(tokens);
+        }
 
         ParseNode* result = malloc(sizeof(ParseNode));
 
