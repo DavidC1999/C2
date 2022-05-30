@@ -25,6 +25,9 @@ enum ParseNodeTypes {
     N_WHILE,
     N_COMPOUND,
     N_RETURN,
+#ifdef DEBUG
+    N_DEBUG
+#endif
 };
 
 enum BinOpNodeType {
@@ -37,7 +40,7 @@ enum BinOpNodeType {
     BINOP_LEQUAL,
     BINOP_GREATER,
     BINOP_GEQUAL,
-    BINOP_BITAND,  //
+    BINOP_BITAND,
     BINOP_BITOR,
     BINOP_SHLEFT,
     BINOP_SHRIGHT,
@@ -126,6 +129,12 @@ typedef struct ReturnStatement {
     ParseNode* value;
 } ReturnStatement;
 
+#ifdef DEBUG
+typedef struct DebugStatement {
+    int64_t number;
+} DebugStatement;
+#endif
+
 struct ParseNode {
     enum ParseNodeTypes type;
     int64_t line;
@@ -144,6 +153,9 @@ struct ParseNode {
         ConditionalNode conditional_info;
         CompoundStatement compound_info;
         ReturnStatement return_info;
+#ifdef DEBUG
+        DebugStatement debug_info;
+#endif
     };
 };
 

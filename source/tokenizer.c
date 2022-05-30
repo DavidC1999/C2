@@ -41,6 +41,9 @@ char* keyword_type_to_name[] = {
     "K_IF",
     "K_WHILE",
     "K_RETURN",
+#ifdef DEBUG
+    "T_DEBUG",
+#endif
 };
 
 static void panic(char* message) {
@@ -123,6 +126,13 @@ static void check_identifier_is_keyword(Token* token) {
         token->type = T_KEYWORD;
         token->number = K_RETURN;
     }
+#ifdef DEBUG
+    else if (strcmp(token->name, "debug") == 0) {
+        free(token->name);
+        token->type = T_KEYWORD;
+        token->number = K_DEBUG;
+    }
+#endif
 }
 
 static bool should_skip(char c) {

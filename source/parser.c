@@ -496,6 +496,26 @@ static ParseNode* get_statement(TokenLL* tokens) {
         panic("unexpected end of token stream", tokens->tail->line);
     }
 
+#ifdef DEBUG
+    // debug statement
+    if (tokens->current->type == T_KEYWORD && tokens->current->number == K_DEBUG) {
+        int64_t line = tokens->current->line;
+        advance_token(tokens);
+        expect_token_type(tokens, T_NUMBER);
+
+        ParseNode* result = malloc(sizeof(ParseNode));
+        result->line = line;
+        result->type = N_DEBUG;
+        result->debug_info.number = tokens->current->number;
+
+        advance_token(tokens);
+        expect_token_type(tokens, T_SEMICOLON);
+        advance_token(tokens);
+
+        return result;
+    }
+#endif
+
     // variable definition
     if (tokens->current->type == T_KEYWORD && tokens->current->number == K_VAR) {
         return get_variable_definition(tokens);
@@ -797,6 +817,10 @@ void free_AST(ParseNode* node) {
         case N_RETURN:
             free_AST(node->return_info.value);
             break;
+#ifdef DEBUG
+        case N_DEBUG:
+            break;
+#endif
     }
     free(node);
 }
@@ -1035,5 +1059,12 @@ void print_AST(ParseNode* node, int64_t indent) {
             printf("}\n");
             break;
         }
+#ifdef DEBUG
+        case N_DEBUG: {
+            print_indent(indent);
+            printf("DEBUG: %ld\n", node->debug_info.number);
+            break;
+        }
+#endif
     }
 }

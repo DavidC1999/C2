@@ -266,6 +266,12 @@ static int64_t call_func(ParseNode* call_node) {
     return 0;
 }
 
+#ifdef DEBUG
+static void debug(int64_t n) {
+    (void)n;
+}
+#endif
+
 static int64_t visit_node(ParseNode* node) {
     if (user_function_returning) {
         // Function is returning. Stop executing statements in the function.
@@ -388,6 +394,12 @@ static int64_t visit_node(ParseNode* node) {
             user_function_returning = true;
             break;
         }
+#ifdef DEBUG
+        case N_DEBUG: {
+            debug(node->debug_info.number);
+            break;
+        }
+#endif
         default: {
             char buffer[100];
             snprintf(buffer, 100, "Unknown node type: %d", node->type);
