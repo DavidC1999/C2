@@ -32,6 +32,12 @@ int main(int argc, char** argv) {
 
     // reading file:
     FILE* file = fopen(argv[1], "r");
+
+    if (file == NULL) {
+        fprintf(stderr, "Could not open file \"%s\"\n", argv[1]);
+        exit(1);
+    }
+
     size_t file_size = get_file_size(file);
     char* buffer = (char*)malloc(sizeof(char) * file_size + 1);
 
