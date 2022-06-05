@@ -1,9 +1,11 @@
 #include "parser.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "helperfunctions.h"
 #include "tokenizer.h"
 
 char* bin_op_node_type_to_string[] = {
@@ -337,158 +339,106 @@ static ParseNode* get_factor(TokenLL* tokens) {
     return NULL;
 }
 
-static bool token_type_is_term_binop_2(TokenLL* tokens) {
-    return (tokens->current->type == T_AMPERSAND ||
-            tokens->current->type == T_PIPE ||
-            tokens->current->type == T_DBL_GREATER ||
-            tokens->current->type == T_DBL_LESS);
-}
+#define HIGHEST_OP_PRECEDENCE 4
 
-static ParseNode* get_term_2(TokenLL* tokens) {
-    ParseNode* result = get_factor(tokens);
+static int64_t get_token_type_precedence(TokenLL* tokens) {
+    switch (tokens->current->type) {
+        case T_EQUAL:
+        case T_LESS:
+        case T_LEQUAL:
+        case T_GREATER:
+        case T_GEQUAL:
+            return 1;
 
-    while (tokens->current != NULL && token_type_is_term_binop_2(tokens)) {
-        enum BinOpNodeType type;
+        case T_AMPERSAND:
+        case T_PIPE:
+        case T_DBL_GREATER:
+        case T_DBL_LESS:
+            return 2;
 
-        switch (tokens->current->type) {
-            case T_AMPERSAND:
-                type = BINOP_BITAND;
-                break;
-            case T_PIPE:
-                type = BINOP_BITOR;
-                break;
-            case T_DBL_GREATER:
-                type = BINOP_SHRIGHT;
-                break;
-            case T_DBL_LESS:
-                type = BINOP_SHLEFT;
-                break;
-        }
+        case T_PLUS:
+        case T_MINUS:
+            return 3;
 
-        int64_t line = tokens->current->line;
-
-        advance_token(tokens);
-        ParseNode* rhs = get_factor(tokens);
-
-        ParseNode* temp = malloc(sizeof(ParseNode));
-        temp->type = N_BIN_OP;
-        temp->line = line;
-        temp->bin_operation_info.type = type;
-        temp->bin_operation_info.left = result;
-        temp->bin_operation_info.right = rhs;
-
-        result = temp;
+        case T_ASTERISK:
+        case T_SLASH:
+            static_assert(HIGHEST_OP_PRECEDENCE == 4);
+            return 4;
     }
 
-    return result;
+    return -1;
 }
 
-static bool token_type_is_term_binop_1(TokenLL* tokens) {
-    return (tokens->current->type == T_EQUAL ||
-            tokens->current->type == T_LESS ||
-            tokens->current->type == T_LEQUAL ||
-            tokens->current->type == T_GREATER ||
-            tokens->current->type == T_GEQUAL);
-}
+static int64_t binop_token_to_binop_type(int64_t binop_token) {
+    switch (binop_token) {
+        // 1:
+        case T_EQUAL:
+            return BINOP_EQUAL;
+        case T_LESS:
+            return BINOP_LESS;
+        case T_LEQUAL:
+            return BINOP_LEQUAL;
+        case T_GREATER:
+            return BINOP_GREATER;
+        case T_GEQUAL:
+            return BINOP_GEQUAL;
 
-static ParseNode* get_term_1(TokenLL* tokens) {
-    ParseNode* result = get_term_2(tokens);
+        // 2:
+        case T_AMPERSAND:
+            return BINOP_BITAND;
+        case T_PIPE:
+            return BINOP_BITOR;
+        case T_DBL_GREATER:
+            return BINOP_SHRIGHT;
+        case T_DBL_LESS:
+            return BINOP_SHLEFT;
 
-    while (tokens->current != NULL && token_type_is_term_binop_1(tokens)) {
-        enum BinOpNodeType type;
+        // 3:
+        case T_PLUS:
+            return BINOP_ADD;
+        case T_MINUS:
+            return BINOP_SUB;
 
-        switch (tokens->current->type) {
-            case T_EQUAL:
-                type = BINOP_EQUAL;
-                break;
-            case T_LESS:
-                type = BINOP_LESS;
-                break;
-            case T_LEQUAL:
-                type = BINOP_LEQUAL;
-                break;
-            case T_GREATER:
-                type = BINOP_GREATER;
-                break;
-            case T_GEQUAL:
-                type = BINOP_GEQUAL;
-                break;
-        }
-
-        int64_t line = tokens->current->line;
-
-        advance_token(tokens);
-        ParseNode* rhs = get_term_2(tokens);
-
-        ParseNode* temp = malloc(sizeof(ParseNode));
-        temp->type = N_BIN_OP;
-        temp->line = line;
-        temp->bin_operation_info.type = type;
-        temp->bin_operation_info.left = result;
-        temp->bin_operation_info.right = rhs;
-
-        result = temp;
+        // 4:
+        case T_ASTERISK:
+            return BINOP_MUL;
+        case T_SLASH:
+            return BINOP_DIV;
     }
 
-    return result;
+    return -1;
 }
 
-static ParseNode* get_term_0(TokenLL* tokens) {
-    ParseNode* result = get_term_1(tokens);
+static ParseNode* get_expression_recursive(int64_t precedence, TokenLL* tokens) {
+    // there are no more binary operators to check, get the factor
+    if (precedence > HIGHEST_OP_PRECEDENCE) return get_factor(tokens);
 
-    while (tokens->current != NULL && (tokens->current->type == T_ASTERISK || tokens->current->type == T_SLASH)) {
-        enum BinOpNodeType type;
-        if (tokens->current->type == T_ASTERISK) {
-            type = BINOP_MUL;
-        } else {  // tokens->current->type == T_SLASH
-            type = BINOP_DIV;
-        }
+    ParseNode* result = get_expression_recursive(precedence + 1, tokens);
+
+    while (tokens->current != NULL && get_token_type_precedence(tokens) == precedence) {
+        enum BinOpNodeType type = binop_token_to_binop_type(tokens->current->type);
+        d_assert((int)type != -1);
 
         int64_t line = tokens->current->line;
 
         advance_token(tokens);
-        ParseNode* rhs = get_term_1(tokens);
+        ParseNode* rhs = get_expression_recursive(precedence + 1, tokens);
 
-        ParseNode* temp = malloc(sizeof(ParseNode));
-        temp->type = N_BIN_OP;
-        temp->line = line;
-        temp->bin_operation_info.type = type;
-        temp->bin_operation_info.left = result;
-        temp->bin_operation_info.right = rhs;
+        ParseNode* binop = malloc(sizeof(ParseNode));
+        binop->type = N_BIN_OP;
+        binop->line = line;
+        binop->bin_operation_info.type = type;
+        binop->bin_operation_info.left = result;
+        binop->bin_operation_info.right = rhs;
 
-        result = temp;
+        result = binop;
     }
 
     return result;
 }
 
 static ParseNode* get_expression(TokenLL* tokens) {
-    ParseNode* result = get_term_0(tokens);
-
-    while (tokens->current != NULL && (tokens->current->type == T_PLUS || tokens->current->type == T_MINUS)) {
-        enum BinOpNodeType type;
-        if (tokens->current->type == T_PLUS) {
-            type = BINOP_ADD;
-        } else {  // tokens->current->type == T_MINUS
-            type = BINOP_SUB;
-        }
-
-        int64_t line = tokens->current->line;
-
-        advance_token(tokens);
-        ParseNode* rhs = get_term_0(tokens);
-
-        ParseNode* temp = malloc(sizeof(ParseNode));
-        temp->type = N_BIN_OP;
-        temp->line = line;
-        temp->bin_operation_info.type = type;
-        temp->bin_operation_info.left = result;
-        temp->bin_operation_info.right = rhs;
-
-        result = temp;
-    }
-
-    return result;
+    return get_expression_recursive(0, tokens);
 }
 
 static ParseNode* get_statement(TokenLL* tokens) {
