@@ -140,7 +140,7 @@ static void var_define(ParseNode* node) {
 }
 
 static int64_t var_set(ParseNode* node) {
-    if (node == NULL || node->type != N_VAR_ASSIGN) {
+    if (node == NULL || !(node->type == N_BIN_OP && node->bin_operation_info.type == BINOP_ASSIGN)) {
         char* error = "Trying to set variable value of non-variable node (this is an internal interpreter error)";
         if (node == NULL)
             panic(error, -1);
@@ -148,25 +148,38 @@ static int64_t var_set(ParseNode* node) {
             panic(error, node->line);
     }
 
-    HashEntry entry;
-    HashTable* current = var_scope_get_current();
-    if (hashtable_get(current, &entry, node->assign_info.name)) {
-        int64_t* ptr = (int64_t*)entry.value;
-        int64_t val = visit_node(node->assign_info.value);
-        *ptr = val;
-        return val;
-    }
+    if (node->bin_operation_info.left->type == N_UN_OP && node->bin_operation_info.left->un_operation_info.type == UNOP_DEREF) {  // ptr assign
+        int64_t* ptr = (int64_t*)visit_node(node->bin_operation_info.left->un_operation_info.operand);
+        int64_t value = visit_node(node->bin_operation_info.right);
+        *ptr = value;
 
-    if (hashtable_get(global_variables, &entry, node->assign_info.name)) {
-        int64_t* ptr = (int64_t*)entry.value;
-        int64_t val = visit_node(node->assign_info.value);
-        *ptr = val;
-        return val;
-    }
+        return value;
+    } else if (node->bin_operation_info.left->type == N_VARIABLE) {  // var assign
+        char* var_name = node->bin_operation_info.left->variable_info.name;
+        int64_t value = visit_node(node->bin_operation_info.right);
 
-    char buffer[100];
-    snprintf(buffer, 100, "Trying to assign to unknown variable: %s", node->assign_info.name);
-    panic(buffer, node->line);
+        HashEntry entry;
+        HashTable* current = var_scope_get_current();
+        if (hashtable_get(current, &entry, var_name)) {
+            int64_t* ptr = (int64_t*)entry.value;
+            *ptr = value;
+            return value;
+        }
+
+        if (hashtable_get(global_variables, &entry, var_name)) {
+            int64_t* ptr = (int64_t*)entry.value;
+            *ptr = value;
+            return value;
+        }
+
+        char buffer[100];
+        snprintf(buffer, 100, "Trying to assign to unknown variable: %s", var_name);
+        panic(buffer, node->line);
+    } else {
+        char buffer[100];
+        snprintf(buffer, 100, "Cannot assign to token of type %s", token_type_to_name[node->bin_operation_info.left->type]);
+        panic(buffer, node->line);
+    }
 
     return 0;
 }
@@ -305,15 +318,6 @@ static int64_t visit_node(ParseNode* node) {
             return call_func(node);
             break;
         }
-        case N_PTR_ASSIGN: {
-            int64_t* addr = (int64_t*)visit_node(node->assign_ptr_info.addr);
-            int64_t val = visit_node(node->assign_ptr_info.value);
-            *addr = val;
-            return val;
-        }
-        case N_VAR_ASSIGN: {
-            return var_set(node);
-        }
         case N_BIN_OP: {
             int64_t left = visit_node(node->bin_operation_info.left);
             int64_t right = visit_node(node->bin_operation_info.right);
@@ -345,6 +349,8 @@ static int64_t visit_node(ParseNode* node) {
                     return left << right;
                 case BINOP_SHRIGHT:
                     return left >> right;
+                case BINOP_ASSIGN:
+                    return var_set(node);
             }
             break;
         }

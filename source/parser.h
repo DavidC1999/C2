@@ -15,8 +15,6 @@ enum ParseNodeTypes {
     N_VAR_DEF,
     N_ARR_DEF,
     N_FUNC_CALL,
-    N_PTR_ASSIGN,
-    N_VAR_ASSIGN,
     N_BIN_OP,
     N_UN_OP,
     N_NUMBER,
@@ -44,6 +42,7 @@ enum BinOpNodeType {
     BINOP_BITOR,
     BINOP_SHLEFT,
     BINOP_SHRIGHT,
+    BINOP_ASSIGN,
 };
 
 enum UnOpNodeType {
@@ -84,16 +83,6 @@ typedef struct FuncCallNode {
     int64_t param_count;
     ParseNode** params;
 } FuncCallNode;
-
-typedef struct AssignPtrNode {
-    ParseNode* addr;
-    ParseNode* value;
-} AssignPtrNode;
-
-typedef struct AssignNode {
-    char* name;
-    ParseNode* value;
-} AssignNode;
 
 typedef struct BinOpNode {
     enum BinOpNodeType type;
@@ -143,8 +132,6 @@ struct ParseNode {
         FuncDefNode func_def_info;
         VarDefNode var_def_info;
         ArrDefNode arr_def_info;
-        AssignPtrNode assign_ptr_info;
-        AssignNode assign_info;
         FuncCallNode func_call_info;
         BinOpNode bin_operation_info;
         UnOpNode un_operation_info;

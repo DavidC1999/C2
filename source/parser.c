@@ -22,6 +22,7 @@ char* bin_op_node_type_to_string[] = {
     "BINOP_BITOR",
     "BINOP_SHLEFT",
     "BINOP_SHRIGHT",
+    "BINOP_ASSIGN",
 };
 
 char* un_op_node_type_to_string[] = {
@@ -151,7 +152,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
         char* name = malloc(sizeof(char) * str_length);
         strncpy(name, tokens->current->name, str_length);
 
-        // array access or assignment
+        // array access
         if (tokens->current->next->type == T_LSQUARE) {
             advance_token(tokens);  // move to left square
             advance_token(tokens);  // move past left square
@@ -163,44 +164,10 @@ static ParseNode* get_factor(TokenLL* tokens) {
             expect_token_type(tokens, T_RSQUARE);
             advance_token(tokens);
 
-            if (tokens->current->type == T_ASSIGN) {  // assignment
-                line = tokens->current->line;         // override line number to assignment token instead of indentifier
-                advance_token(tokens);
-
-                ParseNode* value = get_expression(tokens);
-
-                // array assignment is implemented as syntactic sugar for pointer assignment
-                result->type = N_PTR_ASSIGN;
-                result->line = line;
-                result->assign_ptr_info.addr = get_arr_addr_calculation(name, index, line);
-                result->assign_ptr_info.value = value;
-
-                return result;
-            } else {  // access
-                result->type = N_UN_OP;
-                result->line = line;  // use array identfier line number as line number for node
-                result->un_operation_info.type = UNOP_DEREF;
-                result->un_operation_info.operand = get_arr_addr_calculation(name, index, line);
-                return result;
-            }
-        }
-
-        // var assignment
-        if (tokens->current->next->type == T_ASSIGN) {
-            advance_token(tokens);
-            int64_t line = tokens->current->line;
-
-            advance_token(tokens);
-
-            ParseNode* value = get_expression(tokens);
-
-            ParseNode* result = malloc(sizeof(ParseNode));
-
-            result->type = N_VAR_ASSIGN;
-            result->line = line;
-            result->assign_info.name = name;
-            result->assign_info.value = value;
-
+            result->type = N_UN_OP;
+            result->line = line;  // use array identfier line number as line number for node
+            result->un_operation_info.type = UNOP_DEREF;
+            result->un_operation_info.operand = get_arr_addr_calculation(name, index, line);
             return result;
         }
 
@@ -286,19 +253,10 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         ParseNode* result = malloc(sizeof(ParseNode));
 
-        if (tokens->current->type == T_ASSIGN) {
-            advance_token(tokens);
-
-            result->type = N_PTR_ASSIGN;
-            result->line = line;
-            result->assign_ptr_info.addr = to_deref;
-            result->assign_ptr_info.value = get_expression(tokens);
-        } else {
-            result->type = N_UN_OP;
-            result->line = line;
-            result->un_operation_info.type = UNOP_DEREF;
-            result->un_operation_info.operand = to_deref;
-        }
+        result->type = N_UN_OP;
+        result->line = line;
+        result->un_operation_info.type = UNOP_DEREF;
+        result->un_operation_info.operand = to_deref;
 
         return result;
     }
@@ -339,31 +297,33 @@ static ParseNode* get_factor(TokenLL* tokens) {
     return NULL;
 }
 
-#define HIGHEST_OP_PRECEDENCE 4
+#define HIGHEST_OP_PRECEDENCE 5
 
 static int64_t get_token_type_precedence(TokenLL* tokens) {
     switch (tokens->current->type) {
+        case T_ASSIGN:
+            return 1;
         case T_EQUAL:
         case T_LESS:
         case T_LEQUAL:
         case T_GREATER:
         case T_GEQUAL:
-            return 1;
+            return 2;
 
         case T_AMPERSAND:
         case T_PIPE:
         case T_DBL_GREATER:
         case T_DBL_LESS:
-            return 2;
+            return 3;
 
         case T_PLUS:
         case T_MINUS:
-            return 3;
+            return 4;
 
         case T_ASTERISK:
         case T_SLASH:
-            static_assert(HIGHEST_OP_PRECEDENCE == 4);
-            return 4;
+            static_assert(HIGHEST_OP_PRECEDENCE == 5);
+            return 5;
     }
 
     return -1;
@@ -372,6 +332,10 @@ static int64_t get_token_type_precedence(TokenLL* tokens) {
 static int64_t binop_token_to_binop_type(int64_t binop_token) {
     switch (binop_token) {
         // 1:
+        case T_ASSIGN:
+            return BINOP_ASSIGN;
+
+        // 2:
         case T_EQUAL:
             return BINOP_EQUAL;
         case T_LESS:
@@ -383,7 +347,7 @@ static int64_t binop_token_to_binop_type(int64_t binop_token) {
         case T_GEQUAL:
             return BINOP_GEQUAL;
 
-        // 2:
+        // 3:
         case T_AMPERSAND:
             return BINOP_BITAND;
         case T_PIPE:
@@ -393,13 +357,13 @@ static int64_t binop_token_to_binop_type(int64_t binop_token) {
         case T_DBL_LESS:
             return BINOP_SHLEFT;
 
-        // 3:
+        // 4:
         case T_PLUS:
             return BINOP_ADD;
         case T_MINUS:
             return BINOP_SUB;
 
-        // 4:
+        // 5:
         case T_ASTERISK:
             return BINOP_MUL;
         case T_SLASH:
@@ -731,14 +695,6 @@ void free_AST(ParseNode* node) {
 
             free(node->func_call_info.name);
             break;
-        case N_PTR_ASSIGN:
-            free_AST(node->assign_ptr_info.addr);
-            free_AST(node->assign_ptr_info.value);
-            break;
-        case N_VAR_ASSIGN:
-            free(node->assign_info.name);
-            free(node->assign_info.value);
-            break;
         case N_BIN_OP:
             free(node->bin_operation_info.left);
             free(node->bin_operation_info.right);
@@ -875,42 +831,6 @@ void print_AST(ParseNode* node, int64_t indent) {
                 print_AST(node->func_call_info.params[i], indent + 2);
             print_indent(indent + 1);
             printf("]\n");
-
-            print_indent(indent);
-            printf("}\n");
-            break;
-        }
-        case N_PTR_ASSIGN: {
-            print_indent(indent);
-            printf("Pointer assignment {\n");
-
-            print_indent(indent + 1);
-            printf("Address {\n");
-            print_AST(node->assign_ptr_info.addr, indent + 2);
-            print_indent(indent + 1);
-            printf("}\n");
-
-            print_indent(indent + 1);
-            printf("Value {\n");
-            print_AST(node->assign_ptr_info.value, indent + 2);
-            print_indent(indent + 1);
-            printf("}\n");
-
-            print_indent(indent);
-            printf("}\n");
-            break;
-        }
-        case N_VAR_ASSIGN: {
-            print_indent(indent);
-            printf("Variable assignment {\n");
-
-            print_indent(indent + 1);
-            printf("Identifier: %s\n", node->assign_info.name);
-            print_indent(indent + 1);
-            printf("Value {\n");
-            print_AST(node->assign_info.value, indent + 2);
-            print_indent(indent + 1);
-            printf("}\n");
 
             print_indent(indent);
             printf("}\n");
