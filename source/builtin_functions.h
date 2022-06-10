@@ -11,6 +11,8 @@ int64_t builtin_printu(builtin_panic_func_t panic, int64_t count, int64_t* param
 
 int64_t builtin_putc(builtin_panic_func_t panic, int64_t count, int64_t* params);
 
+int64_t builtin_puts(builtin_panic_func_t panic, int64_t count, int64_t* params);
+
 int64_t builtin_input_num(builtin_panic_func_t panic, int64_t count, int64_t* params);
 
 #endif  // _BUILTIN_FUNCTIONS_H

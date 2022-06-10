@@ -15,6 +15,7 @@
 #define MAX_BUILTIN_FUNCTIONS 100
 #define MAX_FUNCTION_NAME_LEN 100
 #define MAX_VARIABLE_AMT 100
+#define MAX_STR_AMT 100
 
 #define MAX_CALL_DEPTH 100
 
@@ -40,6 +41,8 @@ static HashTable* builtin_functions;
 static HashTable* global_variables;
 static HashTable* var_scopes[MAX_CALL_DEPTH];
 static int64_t curr_scope = -1;  // -1 for global scope
+
+static HashTable* global_strings;
 
 static void panic(char* message, int64_t line) {
     if (line >= 0)
@@ -184,11 +187,33 @@ static int64_t var_set(ParseNode* node) {
     return 0;
 }
 
+static int64_t str_get_ptr(ParseNode* str_node) {
+    if (str_node->type != N_STRING) {
+        panic("Trying to get string pointer from non-string node (this is an interpreter error)", str_node->line);
+    }
+
+    char* str = str_node->string_info.contents;
+
+    int64_t output;
+    if (hashtable_get_int(global_strings, &output, str)) {
+        return output;
+    }
+
+    if (hashtable_set_int(global_strings, str, (int64_t)str)) {
+        return (int64_t)str;
+    }
+
+    panic("Unable to add string to global string space", str_node->line);
+
+    return 0;
+}
+
 static void init_funcs() {
     builtin_functions = hashtable_new(ANY_T, MAX_BUILTIN_FUNCTIONS);
     hashtable_set(builtin_functions, "print", builtin_print);
     hashtable_set(builtin_functions, "printu", builtin_printu);
     hashtable_set(builtin_functions, "putc", builtin_putc);
+    hashtable_set(builtin_functions, "puts", builtin_puts);
     hashtable_set(builtin_functions, "input_num", builtin_input_num);
 
     user_functions = hashtable_new(ANY_T, MAX_USER_FUNCTIONS);
@@ -196,6 +221,14 @@ static void init_funcs() {
     // we malloc our own user functions to put in the hashtable
     // make sure they get freed when the hashtable is freed
     hashtable_force_free_values(user_functions);
+}
+
+static void init_strings() {
+    global_strings = hashtable_new(INT_T, MAX_STR_AMT);
+}
+
+static void free_strings() {
+    hashtable_free(global_strings);
 }
 
 static void define_func(ParseNode* func_def_node) {
@@ -376,6 +409,9 @@ static int64_t visit_node(ParseNode* node) {
         case N_NUMBER: {
             return node->number_info.value;
         }
+        case N_STRING: {
+            return str_get_ptr(node);
+        }
         case N_IF: {
             if (visit_node(node->conditional_info.condition)) {
                 visit_node(node->conditional_info.statement);
@@ -420,6 +456,7 @@ void interpret(ParseNode* node) {
     global_variables = hashtable_new(ANY_T, MAX_VARIABLE_AMT);
 
     init_funcs();
+    init_strings();
     if (node->type != N_ROOT) {
         char buffer[100];
         strncpy(buffer, "Interpreting should start at root node", 100);
@@ -459,4 +496,5 @@ void interpret(ParseNode* node) {
     hashtable_free(builtin_functions);
     hashtable_free(user_functions);
     hashtable_free(global_variables);
+    free_strings();
 }

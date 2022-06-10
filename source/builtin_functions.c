@@ -28,6 +28,14 @@ int64_t builtin_putc(builtin_panic_func_t panic, int64_t count, int64_t* params)
     return 0;
 }
 
+int64_t builtin_puts(builtin_panic_func_t panic, int64_t count, int64_t* params) {
+    if (count != 1) panic("Expected exactly 1 parameter");
+
+    char* string = (char*)(params[0]);
+    printf("%s\n", string);
+    return 0;
+}
+
 int64_t builtin_input_num(builtin_panic_func_t panic, int64_t count, int64_t* params) {
     if (count != 0) panic("Expected exactly 0 parameters");
     (void)params;

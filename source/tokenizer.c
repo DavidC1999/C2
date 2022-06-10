@@ -33,6 +33,7 @@ char* token_type_to_name[] = {
     "T_COMMA",
     "T_AMPERSAND",
     "T_AT",
+    "T_STRING",
 };
 
 char* keyword_type_to_name[] = {
@@ -62,7 +63,8 @@ static void append_token(TokenLL* tokens, int new_type, void* data) {
             new_token->number = *(int*)data;
             break;
         case T_IDENTIFIER:
-            new_token->name = (char*)data;
+        case T_STRING:
+            new_token->string = (char*)data;
             break;
     }
 
@@ -105,30 +107,30 @@ static void create_identifier(char** text, TokenLL* tokens) {
 static void check_identifier_is_keyword(Token* token) {
     if (token->type != T_IDENTIFIER) return;
 
-    if (strcmp(token->name, "func") == 0) {
-        free(token->name);
+    if (strcmp(token->string, "func") == 0) {
+        free(token->string);
         token->type = T_KEYWORD;
         token->number = K_FUNC;
-    } else if (strcmp(token->name, "var") == 0) {
-        free(token->name);
+    } else if (strcmp(token->string, "var") == 0) {
+        free(token->string);
         token->type = T_KEYWORD;
         token->number = K_VAR;
-    } else if (strcmp(token->name, "if") == 0) {
-        free(token->name);
+    } else if (strcmp(token->string, "if") == 0) {
+        free(token->string);
         token->type = T_KEYWORD;
         token->number = K_IF;
-    } else if (strcmp(token->name, "while") == 0) {
-        free(token->name);
+    } else if (strcmp(token->string, "while") == 0) {
+        free(token->string);
         token->type = T_KEYWORD;
         token->number = K_WHILE;
-    } else if (strcmp(token->name, "return") == 0) {
-        free(token->name);
+    } else if (strcmp(token->string, "return") == 0) {
+        free(token->string);
         token->type = T_KEYWORD;
         token->number = K_RETURN;
     }
 #ifdef DEBUG
-    else if (strcmp(token->name, "debug") == 0) {
-        free(token->name);
+    else if (strcmp(token->string, "debug") == 0) {
+        free(token->string);
         token->type = T_KEYWORD;
         token->number = K_DEBUG;
     }
@@ -245,6 +247,27 @@ void tokenize(char* text, TokenLL** result) {
             } else {
                 append_token(*result, T_LESS, NULL);
             }
+        } else if (*text == '"') {
+            ++text;
+            char* start = text;
+            while (*text != EOF && *text != '"' && *text != '\n') {
+                ++text;
+            }
+
+            if (*text != '"') {
+                panic("No closing quote found for string literal");
+            }
+
+            char* end = text;
+            size_t length = end - start;
+            ++text;
+
+            char* contents = malloc(sizeof(char) * length + 1);
+            strncpy(contents, start, length);
+            contents[length] = '\0';
+
+            append_token(*result, T_STRING, contents);
+
         } else if (should_skip(*text)) {
             if (*text == '\n') ++curr_line;
             ++text;
@@ -271,7 +294,7 @@ void print_tokens(Token* node) {
             printf("HEAD -> ");
             break;
         case T_IDENTIFIER:
-            printf("IDENTIFIER: %s -> ", node->name);
+            printf("IDENTIFIER: %s -> ", node->string);
             break;
         case T_KEYWORD:
             printf("KEYWORD: %s -> ", keyword_type_to_name[node->number]);
@@ -345,6 +368,9 @@ void print_tokens(Token* node) {
         case T_DBL_LESS:
             printf("'<<' -> ");
             break;
+        case T_STRING:
+            printf("STRING: \"%s\" ->", node->string);
+            break;
     }
     print_tokens(node->next);
 }
@@ -352,8 +378,8 @@ void print_tokens(Token* node) {
 void free_token(Token* node) {
     if (node == NULL) return;
     free_token(node->next);
-    if (node->type == T_IDENTIFIER) {
-        free(node->name);
+    if (node->type == T_IDENTIFIER || node->type == T_STRING) {
+        free(node->string);
     }
     free(node);
 }

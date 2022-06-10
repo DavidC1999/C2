@@ -18,6 +18,7 @@ enum ParseNodeTypes {
     N_BIN_OP,
     N_UN_OP,
     N_NUMBER,
+    N_STRING,
     N_VARIABLE,
     N_IF,
     N_WHILE,
@@ -99,6 +100,10 @@ typedef struct NumberNode {
     int64_t value;
 } NumberNode;
 
+typedef struct StringNode {
+    char* contents;
+} StringNode;
+
 typedef struct VariableNode {
     char* name;
 } VariableNode;
@@ -136,6 +141,7 @@ struct ParseNode {
         BinOpNode bin_operation_info;
         UnOpNode un_operation_info;
         NumberNode number_info;
+        StringNode string_info;
         VariableNode variable_info;
         ConditionalNode conditional_info;
         CompoundStatement compound_info;

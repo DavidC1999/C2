@@ -10,8 +10,8 @@ typedef struct Token {
     struct Token* next;
     int line;
     union {
-        char* name;  // for identifier
-        int number;  // for number or keyword
+        char* string;  // for identifier and string literals
+        int number;    // for number or keyword
     };
 } Token;
 
@@ -48,7 +48,8 @@ enum TokenTypes {
     T_AT,
     T_PIPE,
     T_DBL_GREATER,
-    T_DBL_LESS
+    T_DBL_LESS,
+    T_STRING,
 };
 
 extern char* token_type_to_name[];
