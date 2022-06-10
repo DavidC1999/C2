@@ -463,12 +463,19 @@ static ParseNode* get_statement(TokenLL* tokens) {
         advance_token(tokens);
 
         ParseNode* statement = get_statement(tokens);
+        ParseNode* else_statement;
+
+        if ((keyword_type == K_IF) && (tokens->current->type == T_KEYWORD) && (tokens->current->number = K_ELSE)) {
+            advance_token(tokens);
+            else_statement = get_statement(tokens);
+        }
 
         ParseNode* result = malloc(sizeof(ParseNode));
         result->type = keyword_type == K_IF ? N_IF : N_WHILE;
         result->line = line;
         result->conditional_info.condition = condition;
         result->conditional_info.statement = statement;
+        result->conditional_info.else_statement = else_statement;
 
         return result;
     }
@@ -920,6 +927,14 @@ void print_AST(ParseNode* node, int64_t indent) {
             print_AST(node->conditional_info.statement, indent + 2);
             print_indent(indent + 1);
             printf("}\n");
+
+            if (node->type == N_IF) {
+                print_indent(indent + 1);
+                printf("Else statement {\n");
+                print_AST(node->conditional_info.else_statement, indent + 2);
+                print_indent(indent + 1);
+                printf("}\n");
+            }
 
             print_indent(indent);
             printf("}\n");

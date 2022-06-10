@@ -415,6 +415,8 @@ static int64_t visit_node(ParseNode* node) {
         case N_IF: {
             if (visit_node(node->conditional_info.condition)) {
                 visit_node(node->conditional_info.statement);
+            } else {
+                visit_node(node->conditional_info.else_statement);
             }
             break;
         }

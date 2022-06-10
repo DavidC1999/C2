@@ -58,6 +58,7 @@ enum KeywordTypes {
     K_FUNC,
     K_VAR,
     K_IF,
+    K_ELSE,
     K_WHILE,
     K_RETURN,
 #ifdef DEBUG

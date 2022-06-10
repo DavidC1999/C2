@@ -40,6 +40,7 @@ char* keyword_type_to_name[] = {
     "K_FUNC",
     "K_VAR",
     "K_IF",
+    "K_ELSE",
     "K_WHILE",
     "K_RETURN",
 #ifdef DEBUG
@@ -119,6 +120,10 @@ static void check_identifier_is_keyword(Token* token) {
         free(token->string);
         token->type = T_KEYWORD;
         token->number = K_IF;
+    } else if (strcmp(token->string, "else") == 0) {
+        free(token->string);
+        token->type = T_KEYWORD;
+        token->number = K_ELSE;
     } else if (strcmp(token->string, "while") == 0) {
         free(token->string);
         token->type = T_KEYWORD;

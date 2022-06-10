@@ -112,6 +112,7 @@ typedef struct VariableNode {
 typedef struct ConditionalNode {
     ParseNode* condition;
     ParseNode* statement;
+    ParseNode* else_statement;  // only used in if-statements
 } ConditionalNode;
 
 typedef struct CompoundStatement {
