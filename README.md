@@ -11,7 +11,3 @@ The C preprocossor is outdated... Header guards? Who thought that was a good ide
 
 **Build system**
 I think we can all agree one of the greatest shortcomings of C is the wild west that is building your applications. Make, CMake, Ninja... For this reason, C= is a purely interpreted language. Just write your code, run the interpreter, and you're on your way.
-
-## TO DO LIST
-More or less in order of priority:
-- [ ] else statements
