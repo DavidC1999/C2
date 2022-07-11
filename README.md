@@ -18,14 +18,14 @@ This software has been developed on Pop!_OS \[version\]. The Windows build has a
 Building might work on ealier or later versions of any software versions mentioned here or on other Debian-based systems. Maybe even other Linux distributions. These are just the versions I used.
 
 ### Pop!_OS
-gcc version: 
-make version:
-ar version:
+gcc version:  
+make version:  
+ar version:  
 
 ### WSL Ubuntu 22.04
-gcc version: 11.2.0
-make version: 4.3
-ar version: 2.38
+gcc version: 11.2.0  
+make version: 4.3  
+ar version: 2.38  
 
 ### Building for Linux
 ```bash
@@ -38,6 +38,7 @@ Install the mingw-w64 cross compiler suite if you haven't already. I used versio
 $ sudo apt install mingw-w64
 ```
 
+Now run the windows build script
 ```bash
 $ ./build_windows.sh [release]
 ```
