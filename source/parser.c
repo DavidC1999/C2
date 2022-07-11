@@ -444,7 +444,7 @@ static ParseNode* get_statement(TokenLL* tokens) {
         advance_token(tokens);
 
         ParseNode* statement = get_statement(tokens);
-        ParseNode* else_statement;
+        ParseNode* else_statement = NULL;
 
         if ((keyword_type == K_IF) && (tokens->current->type == T_KEYWORD) && (tokens->current->number == K_ELSE)) {
             advance_token(tokens);

@@ -1,10 +1,7 @@
-// The main function will be called automatically
 func main() {
-	var ui = input_num();
-
-	if(ui == 1) {
-		puts("User entered 1");
-	} else {
-		puts("User did NOT enter 1");
-	}
+    puts("Hello, world!");
+    var user_input = input_num();
+    if(1 == user_input) {
+        print(user_input);
+    }
 }
