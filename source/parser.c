@@ -7,6 +7,7 @@
 
 #include "helperfunctions.h"
 #include "tokenizer.h"
+#include "xplatform.h"
 
 char* bin_op_node_type_to_string[] = {
     "BINOP_ADD",
@@ -37,7 +38,7 @@ static void advance_token(TokenLL* tokens) {
 }
 
 static void panic(char* message, int64_t line) {
-    fprintf(stderr, "Parser error on line %ld: %s\n", line, message);
+    fprintf(stderr, "Parser error on line " INT64_FORMAT ": %s\n", line, message);
     exit(1);
 }
 
@@ -314,7 +315,7 @@ static int64_t get_token_type_precedence(TokenLL* tokens) {
             return 4;
 
         case T_ASTERISK:
-        case T_SLASH:
+        case T_SLASH:;
             static_assert(HIGHEST_OP_PRECEDENCE == 5);
             return 5;
     }
@@ -662,7 +663,7 @@ void free_AST(ParseNode* node) {
     }
 
     switch (node->type) {
-        case N_ROOT:
+        case N_ROOT:;
             int64_t count = node->root_info.count;
             for (int64_t i = 0; i < count; ++i) {
                 free(node->root_info.definitions[i]);
@@ -877,7 +878,7 @@ void print_AST(ParseNode* node, int64_t indent) {
         }
         case N_NUMBER: {
             print_indent(indent);
-            printf("Number: %ld\n", node->number_info.value);
+            printf("Number: " INT64_FORMAT "\n", node->number_info.value);
             break;
         }
         case N_STRING: {
@@ -947,7 +948,7 @@ void print_AST(ParseNode* node, int64_t indent) {
 #ifdef DEBUG
         case N_DEBUG: {
             print_indent(indent);
-            printf("DEBUG: %ld\n", node->debug_info.number);
+            printf("DEBUG: " INT64_FORMAT "\n", node->debug_info.number);
             break;
         }
 #endif
