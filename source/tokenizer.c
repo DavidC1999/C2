@@ -379,6 +379,8 @@ void print_tokens(Token* node) {
         case T_STRING:
             printf("STRING: \"%s\" ->", node->string);
             break;
+        default:
+            assert(false && "Unexhaustive switch for printing tokens");
     }
     print_tokens(node->next);
 }

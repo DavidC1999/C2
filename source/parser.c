@@ -174,6 +174,8 @@ static ParseNode* get_factor(TokenLL* tokens) {
         free(name);
     }
 
+    // TODO: an if statement with the same condition twice is kinda ugly
+
     if (tokens->current->type == T_IDENTIFIER) {
         int64_t line = tokens->current->line;
         if (tokens->current->next != NULL && tokens->current->next->type == T_LPAREN)
@@ -241,29 +243,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
         int64_t line = tokens->current->line;
         advance_token(tokens);
 
-        ParseNode* to_deref;
-        if (tokens->current->type == T_LPAREN) {  // Allow dereference with pointer arithmetic within parenthesis
-            to_deref = get_expression(tokens);
-        } else {  // No parenthesis, expect a variable
-            /*
-                This is to avoid a scenario like @a = 10
-                To be interpreted as @(a = 10)
-                Instead of @(a) = 10
-             */
-            expect_token_type(tokens, T_IDENTIFIER);
-
-            size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
-            char* name = malloc(sizeof(char) * str_length);
-            strncpy(name, tokens->current->string, str_length);
-
-            to_deref = malloc(sizeof(ParseNode*));
-            to_deref->type = N_VARIABLE;
-            to_deref->line = tokens->current->line;
-            to_deref->variable_info.name = name;
-
-            advance_token(tokens);
-        }
-
+        ParseNode* to_deref = get_factor(tokens);
         ParseNode* result = malloc(sizeof(ParseNode));
 
         result->type = N_UN_OP;
@@ -551,10 +531,9 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     advance_token(tokens);
 
     expect_token_type(tokens, T_IDENTIFIER);
-    size_t identifier_len = strlen(tokens->current->string);
-    char* identifier_name = (char*)malloc(sizeof(char) * (identifier_len + 1));
+    size_t identifier_len = strlen(tokens->current->string) + 1;  // including '\0'
+    char* identifier_name = (char*)malloc(sizeof(char) * identifier_len);
     strncpy(identifier_name, tokens->current->string, identifier_len);
-    identifier_name[identifier_len] = '\0';
     advance_token(tokens);
 
     expect_token_type(tokens, T_LPAREN);
@@ -610,10 +589,9 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
     advance_token(tokens);
 
     expect_token_type(tokens, T_IDENTIFIER);
-    size_t identifier_len = strlen(tokens->current->string);
-    char* identifier_name = (char*)malloc(sizeof(char) * (identifier_len + 1));
+    size_t identifier_len = strlen(tokens->current->string) + 1;  // including '\0'
+    char* identifier_name = (char*)malloc(sizeof(char) * identifier_len);
     strncpy(identifier_name, tokens->current->string, identifier_len);
-    identifier_name[identifier_len] = '\0';
     advance_token(tokens);
 
     ParseNode* result = malloc(sizeof(ParseNode));
