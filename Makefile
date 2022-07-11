@@ -27,7 +27,7 @@ debug: libs
 debug: $(TARGET)
 
 .PHONY: release
-release: CFLAGS += -O2
+release: CFLAGS += -O2 -Wno-array-bounds
 release: libs
 release: $(TARGET)
 
