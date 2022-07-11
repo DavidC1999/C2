@@ -346,6 +346,9 @@ void print_tokens(Token* node) {
         case T_EQUAL:
             printf("'==' -> ");
             break;
+        case T_COMMA:
+            printf("',' -> ");
+            break;
         case T_LESS:
             printf("'<' -> ");
             break;
