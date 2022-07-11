@@ -71,9 +71,11 @@ static ParseNode* get_variable_definition(TokenLL* tokens);
 
 static ParseNode* get_function_call(TokenLL* tokens) {
     expect_token_type(tokens, T_IDENTIFIER);
+
     size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
     char* name = malloc(sizeof(char) * str_length);
-    strncpy(name, tokens->current->string, str_length);
+    strcpy(name, tokens->current->string);
+
     int64_t line = tokens->current->line;
     advance_token(tokens);
 
@@ -151,7 +153,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
-        strncpy(name, tokens->current->string, str_length);
+        strcpy(name, tokens->current->string);
 
         // array access
         if (tokens->current->next->type == T_LSQUARE) {
@@ -184,7 +186,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
-        strncpy(name, tokens->current->string, str_length);
+        strcpy(name, tokens->current->string);
 
         advance_token(tokens);
 
@@ -212,7 +214,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t count = strlen(tokens->current->string) + 1;
         result->string_info.contents = malloc(sizeof(char) * count);
-        strncpy(result->string_info.contents, tokens->current->string, strlen(tokens->current->string) + 1);
+        strcpy(result->string_info.contents, tokens->current->string);
 
         advance_token(tokens);
         return result;
@@ -263,7 +265,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
-        strncpy(name, tokens->current->string, str_length);
+        strcpy(name, tokens->current->string);
 
         ParseNode* operand = malloc(sizeof(ParseNode*));
         operand->type = N_VARIABLE;
@@ -534,7 +536,7 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     expect_token_type(tokens, T_IDENTIFIER);
     size_t identifier_len = strlen(tokens->current->string) + 1;  // including '\0'
     char* identifier_name = (char*)malloc(sizeof(char) * identifier_len);
-    strncpy(identifier_name, tokens->current->string, identifier_len);
+    strcpy(identifier_name, tokens->current->string);
     advance_token(tokens);
 
     expect_token_type(tokens, T_LPAREN);
@@ -554,7 +556,7 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
 
             size_t param_len = strlen(tokens->current->string) + 1;  // including '\0'
             func_params[param_counter] = malloc(sizeof(char) * param_len);
-            strncpy(func_params[param_counter], tokens->current->string, param_len);
+            strcpy(func_params[param_counter], tokens->current->string);
 
             advance_token(tokens);
 
@@ -592,7 +594,7 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
     expect_token_type(tokens, T_IDENTIFIER);
     size_t identifier_len = strlen(tokens->current->string) + 1;  // including '\0'
     char* identifier_name = (char*)malloc(sizeof(char) * identifier_len);
-    strncpy(identifier_name, tokens->current->string, identifier_len);
+    strcpy(identifier_name, tokens->current->string);
     advance_token(tokens);
 
     ParseNode* result = malloc(sizeof(ParseNode));

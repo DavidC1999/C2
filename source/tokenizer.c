@@ -98,9 +98,12 @@ static void create_identifier(char** text, TokenLL* tokens) {
     }
     buffer[buffer_i] = '\0';
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
     char* data = (char*)malloc(sizeof(char) * (buffer_i + 1));
     strncpy(data, buffer, buffer_i + 1);
     data[buffer_i] = '\0';
+#pragma GCC diagnostic pop
 
     append_token(tokens, T_IDENTIFIER, data);
 }

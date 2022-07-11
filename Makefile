@@ -27,6 +27,7 @@ debug: libs
 debug: $(TARGET)
 
 .PHONY: release
+release: CFLAGS += -O2
 release: libs
 release: $(TARGET)
 
