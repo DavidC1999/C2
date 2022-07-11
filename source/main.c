@@ -50,6 +50,15 @@ int main(int argc, char** argv) {
 
     tokenize(buffer, &tokens);
 
+    TokenLL tokens_cpy = *tokens;
+
+    while (tokens_cpy.current != NULL) {
+        if (tokens_cpy.current->type == T_KEYWORD && tokens_cpy.current->number == K_IF) {
+            printf("if-statement token address: %p\n", tokens_cpy.current);
+        }
+        tokens_cpy.current = tokens_cpy.current->next;
+    }
+
     free(buffer);
 
 #ifdef DEBUG

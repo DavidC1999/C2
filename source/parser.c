@@ -740,7 +740,7 @@ static void print_indent(int64_t amt) {
 
 void print_AST(ParseNode* node, int64_t indent) {
     if (node == NULL) {
-        fprintf(stderr, "Error printing freeing AST, node is NULL");
+        fprintf(stderr, "Error freeing AST, node is NULL");
         exit(1);
     }
 
@@ -909,7 +909,8 @@ void print_AST(ParseNode* node, int64_t indent) {
             if (node->type == N_IF) {
                 print_indent(indent + 1);
                 printf("Else statement {\n");
-                print_AST(node->conditional_info.else_statement, indent + 2);
+                if (node->conditional_info.else_statement != NULL)
+                    print_AST(node->conditional_info.else_statement, indent + 2);
                 print_indent(indent + 1);
                 printf("}\n");
             }
