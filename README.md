@@ -27,7 +27,7 @@ $ make [release]
 ```
 
 ### Building for Windows
-Install the mingw-w64 cross compiler suite if you haven't already. I used version X.
+Install the mingw-w64 cross compiler suite if you haven't already. I used version 10-win32 20220113.
 ```bash
 $ sudo apt install mingw-w64
 ```
