@@ -11,3 +11,28 @@ The C preprocossor is outdated... Header guards? Who thought that was a good ide
 
 **Build system**
 I think we can all agree one of the greatest shortcomings of C is the wild west that is building your applications. Make, CMake, Ninja... For this reason, C= is a purely interpreted language. Just write your code, run the interpreter, and you're on your way.
+
+## Building
+This software has been developed on Pop!_OS 22.04 LTS. The Windows build has also been (briefly) tested on WSL with Ubuntu 22.04 LTS.
+
+gcc version: 11.2.0  
+make version: 4.3  
+ar version: 2.38  
+
+Building might work on ealier or later versions of any software versions mentioned here or on other Debian-based systems. Maybe even other Linux distributions. These are just the versions I used.
+
+### Building for Linux
+```bash
+$ make [release]
+```
+
+### Building for Windows
+Install the mingw-w64 cross compiler suite if you haven't already. I used version 10-win32 20220113.
+```bash
+$ sudo apt install mingw-w64
+```
+
+Now run the windows build script
+```bash
+$ ./build_windows.sh [release]
+```

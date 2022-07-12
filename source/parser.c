@@ -7,6 +7,7 @@
 
 #include "helperfunctions.h"
 #include "tokenizer.h"
+#include "xplatform.h"
 
 char* bin_op_node_type_to_string[] = {
     "BINOP_ADD",
@@ -37,7 +38,7 @@ static void advance_token(TokenLL* tokens) {
 }
 
 static void panic(char* message, int64_t line) {
-    fprintf(stderr, "Parser error on line %ld: %s\n", line, message);
+    fprintf(stderr, "Parser error on line " INT64_FORMAT ": %s\n", line, message);
     exit(1);
 }
 
@@ -70,9 +71,11 @@ static ParseNode* get_variable_definition(TokenLL* tokens);
 
 static ParseNode* get_function_call(TokenLL* tokens) {
     expect_token_type(tokens, T_IDENTIFIER);
+
     size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
     char* name = malloc(sizeof(char) * str_length);
-    strncpy(name, tokens->current->string, str_length);
+    strcpy(name, tokens->current->string);
+
     int64_t line = tokens->current->line;
     advance_token(tokens);
 
@@ -150,7 +153,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
-        strncpy(name, tokens->current->string, str_length);
+        strcpy(name, tokens->current->string);
 
         // array access
         if (tokens->current->next->type == T_LSQUARE) {
@@ -183,7 +186,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
-        strncpy(name, tokens->current->string, str_length);
+        strcpy(name, tokens->current->string);
 
         advance_token(tokens);
 
@@ -211,7 +214,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t count = strlen(tokens->current->string) + 1;
         result->string_info.contents = malloc(sizeof(char) * count);
-        strncpy(result->string_info.contents, tokens->current->string, strlen(tokens->current->string) + 1);
+        strcpy(result->string_info.contents, tokens->current->string);
 
         advance_token(tokens);
         return result;
@@ -262,7 +265,7 @@ static ParseNode* get_factor(TokenLL* tokens) {
 
         size_t str_length = strlen(tokens->current->string) + 1;  // including '\0'
         char* name = malloc(sizeof(char) * str_length);
-        strncpy(name, tokens->current->string, str_length);
+        strcpy(name, tokens->current->string);
 
         ParseNode* operand = malloc(sizeof(ParseNode*));
         operand->type = N_VARIABLE;
@@ -314,7 +317,7 @@ static int64_t get_token_type_precedence(TokenLL* tokens) {
             return 4;
 
         case T_ASTERISK:
-        case T_SLASH:
+        case T_SLASH:;
             static_assert(HIGHEST_OP_PRECEDENCE == 5);
             return 5;
     }
@@ -443,7 +446,7 @@ static ParseNode* get_statement(TokenLL* tokens) {
         advance_token(tokens);
 
         ParseNode* statement = get_statement(tokens);
-        ParseNode* else_statement;
+        ParseNode* else_statement = NULL;
 
         if ((keyword_type == K_IF) && (tokens->current->type == T_KEYWORD) && (tokens->current->number == K_ELSE)) {
             advance_token(tokens);
@@ -533,7 +536,7 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     expect_token_type(tokens, T_IDENTIFIER);
     size_t identifier_len = strlen(tokens->current->string) + 1;  // including '\0'
     char* identifier_name = (char*)malloc(sizeof(char) * identifier_len);
-    strncpy(identifier_name, tokens->current->string, identifier_len);
+    strcpy(identifier_name, tokens->current->string);
     advance_token(tokens);
 
     expect_token_type(tokens, T_LPAREN);
@@ -553,7 +556,7 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
 
             size_t param_len = strlen(tokens->current->string) + 1;  // including '\0'
             func_params[param_counter] = malloc(sizeof(char) * param_len);
-            strncpy(func_params[param_counter], tokens->current->string, param_len);
+            strcpy(func_params[param_counter], tokens->current->string);
 
             advance_token(tokens);
 
@@ -591,7 +594,7 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
     expect_token_type(tokens, T_IDENTIFIER);
     size_t identifier_len = strlen(tokens->current->string) + 1;  // including '\0'
     char* identifier_name = (char*)malloc(sizeof(char) * identifier_len);
-    strncpy(identifier_name, tokens->current->string, identifier_len);
+    strcpy(identifier_name, tokens->current->string);
     advance_token(tokens);
 
     ParseNode* result = malloc(sizeof(ParseNode));
@@ -662,7 +665,7 @@ void free_AST(ParseNode* node) {
     }
 
     switch (node->type) {
-        case N_ROOT:
+        case N_ROOT:;
             int64_t count = node->root_info.count;
             for (int64_t i = 0; i < count; ++i) {
                 free(node->root_info.definitions[i]);
@@ -877,7 +880,7 @@ void print_AST(ParseNode* node, int64_t indent) {
         }
         case N_NUMBER: {
             print_indent(indent);
-            printf("Number: %ld\n", node->number_info.value);
+            printf("Number: " INT64_FORMAT "\n", node->number_info.value);
             break;
         }
         case N_STRING: {
@@ -947,7 +950,7 @@ void print_AST(ParseNode* node, int64_t indent) {
 #ifdef DEBUG
         case N_DEBUG: {
             print_indent(indent);
-            printf("DEBUG: %ld\n", node->debug_info.number);
+            printf("DEBUG: " INT64_FORMAT "\n", node->debug_info.number);
             break;
         }
 #endif

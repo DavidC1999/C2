@@ -10,6 +10,7 @@
 #include "hashtable/hashtable.h"
 #include "parser.h"
 #include "tokenizer.h"
+#include "xplatform.h"
 
 #define MAX_USER_FUNCTIONS 100
 #define MAX_BUILTIN_FUNCTIONS 100
@@ -46,7 +47,7 @@ static HashTable* global_strings;
 
 static void panic(char* message, int64_t line) {
     if (line >= 0)
-        fprintf(stderr, "Error while interpreting on line %ld: %s\n", line, message);
+        fprintf(stderr, "Error while interpreting on line " INT64_FORMAT ": %s\n", line, message);
     else
         fprintf(stderr, "Error while interpreting: %s\n", message);
     exit(1);
@@ -256,7 +257,7 @@ static int64_t call_func(ParseNode* call_node) {
             snprintf(
                 buffer,
                 100,
-                "Function %s expects %ld arguments, but %ld were given",
+                "Function %s expects " INT64_FORMAT " arguments, but " INT64_FORMAT " were given",
                 call_node->func_call_info.name,
                 user_func->param_count, param_amt_given);
             panic(buffer, call_node->line);
@@ -391,7 +392,7 @@ static int64_t visit_node(ParseNode* node) {
             switch (node->un_operation_info.type) {
                 case UNOP_NEGATE:
                     return -1 * visit_node(node->un_operation_info.operand);
-                case UNOP_DEREF:
+                case UNOP_DEREF:;
                     int64_t operand = visit_node(node->un_operation_info.operand);
 
                     return *(int64_t*)operand;
@@ -491,7 +492,7 @@ void interpret(ParseNode* node) {
         var_name = entry.key;
         int64_t* ptr = (int64_t*)entry.value;
         int64_t val = *ptr;
-        printf("%s (%p): %ld / 0x%lx\n", var_name, ptr, val, (uint64_t)val);
+        printf("%s (%p): " INT64_FORMAT " / 0x" INT64_FORMAT_HEX "\n", var_name, ptr, val, (uint64_t)val);
     }
 #endif
 

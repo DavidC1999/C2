@@ -1,3 +1,5 @@
+export CC
+
 CFLAGS=-W -Wall -Wextra -Werror -std=c11
 MAKE_ARGS=
 LIBS=hashtable/hashtable.a
@@ -11,6 +13,10 @@ SRCS := $(wildcard source/*.c)
 HDRS := $(wildcard source/*.h)
 OBJS := $(patsubst source/%.c,bin/%.o,$(SRCS))
 
+ifdef WINDOWS
+CFLAGS += -DWINDOWS
+endif
+
 .PHONY: all
 all: debug
 
@@ -21,7 +27,7 @@ debug: libs
 debug: $(TARGET)
 
 .PHONY: release
-release: MAKE_ARGS += debug
+release: CFLAGS += -O2 -Wno-array-bounds
 release: libs
 release: $(TARGET)
 
@@ -43,3 +49,4 @@ clean:
 	$(MAKE) -C lib clean
 	rm -rf bin
 	rm -f $(TARGET)
+	rm -f $(TARGET).exe

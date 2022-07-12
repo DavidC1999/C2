@@ -1,4 +1,5 @@
 bin
 interpreter
+interpreter.exe
 *.bkp
 .vscode

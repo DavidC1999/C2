@@ -3,11 +3,12 @@
 #include <stdlib.h>
 
 #include "interpreter.h"
+#include "xplatform.h"
 
 int64_t builtin_print(builtin_panic_func_t panic, int64_t count, int64_t* params) {
     if (count != 1) panic("Expected exactly 1 parameter");
 
-    printf("%ld\n", params[0]);
+    printf(INT64_FORMAT "\n", params[0]);
 
     return 0;
 }
@@ -15,7 +16,7 @@ int64_t builtin_print(builtin_panic_func_t panic, int64_t count, int64_t* params
 int64_t builtin_printu(builtin_panic_func_t panic, int64_t count, int64_t* params) {
     if (count != 1) panic("Expected exactly 1 parameter");
 
-    printf("%lu\n", (uint64_t)(params[0]));
+    printf(UINT64_FORMAT "\n", (uint64_t)(params[0]));
 
     return 0;
 }
