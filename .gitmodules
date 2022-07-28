@@ -1,3 +1,0 @@
-[submodule "lib/c-hashtable"]
-	path = lib/hashtable
-	url = https://github.com/DavidC1999/c-hashtable
