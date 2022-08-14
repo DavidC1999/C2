@@ -1,6 +1,7 @@
 #ifndef _VECTOR_H
 #define _VECTOR_H
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -19,6 +20,9 @@ void vector_free_shallow(Vector* v);
 
 // copies 'elem', does not take ownership
 void vector_push(Vector* v, void* elem);
+
+// removes last element, returns whether or not it succeeded
+bool vector_pop(Vector* v, void** buffer);
 
 void* vector_get(Vector* v, size_t index);
 

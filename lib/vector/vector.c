@@ -1,5 +1,6 @@
 #include "vector.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 
 #define PTR_SIZE sizeof(void*)
@@ -39,6 +40,15 @@ void vector_push(Vector* v, void* elem) {
 
     v->arr[v->length] = elem;
     v->length += 1;
+}
+
+bool vector_pop(Vector* v, void** buffer) {
+    if (v->length > 0) {
+        *buffer = v->arr[v->length - 1];
+        v->length -= 1;
+        return true;
+    }
+    return false;
 }
 
 void* vector_get(Vector* v, size_t index) {

@@ -7,6 +7,7 @@
 
 #include "helperfunctions.h"
 #include "tokenizer.h"
+#include "vector/vector.h"
 #include "xplatform.h"
 
 char* bin_op_node_type_to_string[] = {
@@ -81,20 +82,12 @@ static ParseNode* get_function_call(TokenLL* tokens) {
 
     expect_token_type(tokens, T_LPAREN);
 
-    // TODO: dynamic array
-    ParseNode* func_params[MAX_PARAMS_PER_FUNC];
-    int64_t param_counter = 0;
+    Vector* func_params = vector_new(10);  // initial size of 10, quite arbitrary
 
     if (tokens->current->next->type != T_RPAREN) {
         do {
-            if (param_counter >= MAX_PARAMS_PER_FUNC) {
-                panic("Too many function parameters", tokens->current->line);
-            }
-
             advance_token(tokens);
-            func_params[param_counter] = get_expression(tokens);
-
-            ++param_counter;
+            vector_push(func_params, get_expression(tokens));
         } while (tokens->current->type == T_COMMA);
     } else {
         advance_token(tokens);
@@ -107,11 +100,13 @@ static ParseNode* get_function_call(TokenLL* tokens) {
     result->type = N_FUNC_CALL;
     result->line = line;
     result->func_call_info.name = name;
-    result->func_call_info.param_count = param_counter;
-    result->func_call_info.params = malloc(sizeof(ParseNode*) * param_counter);
-    for (int64_t i = 0; i < param_counter; ++i) {
-        result->func_call_info.params[i] = func_params[i];
+    result->func_call_info.param_count = vector_size(func_params);
+    result->func_call_info.params = malloc(sizeof(ParseNode*) * vector_size(func_params));
+    for (size_t i = 0; i < vector_size(func_params); ++i) {
+        result->func_call_info.params[i] = (ParseNode*)vector_get(func_params, i);
     }
+
+    vector_free_shallow(func_params);
 
     return result;
 }
@@ -469,15 +464,10 @@ static ParseNode* get_statement(TokenLL* tokens) {
 
         advance_token(tokens);
 
-        ParseNode* statements[MAX_STATEMENTS_PER_FUNC];
+        Vector* statements = vector_new(10);
 
-        int64_t statement_counter = 0;
         while (tokens->current != NULL && tokens->current->type != T_RBRACE) {
-            if (statement_counter >= MAX_STATEMENTS_PER_FUNC) {
-                panic("Too many statements for one compound statement", tokens->current->line);
-            }
-
-            statements[statement_counter++] = get_statement(tokens);
+            vector_push(statements, get_statement(tokens));
         }
 
         expect_token_type(tokens, T_RBRACE);
@@ -486,12 +476,14 @@ static ParseNode* get_statement(TokenLL* tokens) {
         ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
         result->type = N_COMPOUND;
         result->line = line;
-        result->compound_info.statement_amt = statement_counter;
-        result->compound_info.statements = malloc(sizeof(ParseNode*) * statement_counter);
+        result->compound_info.statement_amt = vector_size(statements);
+        result->compound_info.statements = malloc(sizeof(ParseNode*) * vector_size(statements));
 
-        for (int64_t i = 0; i < statement_counter; ++i) {
-            result->compound_info.statements[i] = statements[i];
+        for (size_t i = 0; i < vector_size(statements); ++i) {
+            result->compound_info.statements[i] = (ParseNode*)vector_get(statements, i);
         }
+
+        vector_free_shallow(statements);
 
         return result;
     }
@@ -541,26 +533,21 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
 
     expect_token_type(tokens, T_LPAREN);
 
-    // TODO: dynamic array
-    char* func_params[MAX_PARAMS_PER_FUNC];
-    int64_t param_counter = 0;
+    Vector* func_params = vector_new(10);
 
     if (tokens->current->next->type == T_IDENTIFIER) {
         do {
-            if (param_counter >= MAX_PARAMS_PER_FUNC) {
-                panic("Too many function parameters", tokens->current->line);
-            }
-
             advance_token(tokens);
             expect_token_type(tokens, T_IDENTIFIER);
 
             size_t param_len = strlen(tokens->current->string) + 1;  // including '\0'
-            func_params[param_counter] = malloc(sizeof(char) * param_len);
-            strcpy(func_params[param_counter], tokens->current->string);
+            char* name = malloc(sizeof(char) * param_len);
+            strcpy(name, tokens->current->string);
+
+            vector_push(func_params, name);
 
             advance_token(tokens);
 
-            ++param_counter;
         } while (tokens->current->type == T_COMMA);
     } else {
         advance_token(tokens);
@@ -577,11 +564,13 @@ static ParseNode* get_function_definition(TokenLL* tokens) {
     result->line = line;
     result->func_def_info.name = identifier_name;
     result->func_def_info.statement = statement;
-    result->func_def_info.param_count = param_counter;
-    result->func_def_info.params = malloc(sizeof(char*) * param_counter);
-    for (int64_t i = 0; i < param_counter; ++i) {
-        result->func_def_info.params[i] = func_params[i];
+    result->func_def_info.param_count = vector_size(func_params);
+    result->func_def_info.params = malloc(sizeof(char*) * vector_size(func_params));
+    for (size_t i = 0; i < vector_size(func_params); ++i) {
+        result->func_def_info.params[i] = vector_get(func_params, i);
     }
+
+    vector_free_shallow(func_params);
 
     return result;
 }
@@ -624,17 +613,16 @@ static ParseNode* get_variable_definition(TokenLL* tokens) {
 }
 
 ParseNode* parse(TokenLL* tokens) {
-    // TODO: resizing array
-    ParseNode* definitions[1000];
-    int64_t definitions_counter = 0;
+    Vector* definitions = vector_new(10);
+
     while (tokens->current != NULL &&
            tokens->current->type == T_KEYWORD) {
         switch (tokens->current->number) {
             case K_FUNC:
-                definitions[definitions_counter++] = get_function_definition(tokens);
+                vector_push(definitions, get_function_definition(tokens));
                 break;
             case K_VAR:
-                definitions[definitions_counter++] = get_variable_definition(tokens);
+                vector_push(definitions, get_variable_definition(tokens));
                 break;
         }
     }
@@ -648,12 +636,14 @@ ParseNode* parse(TokenLL* tokens) {
     ParseNode* result = (ParseNode*)malloc(sizeof(ParseNode));
     result->type = N_ROOT;
     result->line = 0;
-    result->root_info.count = definitions_counter;
-    result->root_info.definitions = malloc(sizeof(ParseNode*) * definitions_counter);
+    result->root_info.count = vector_size(definitions);
+    result->root_info.definitions = malloc(sizeof(ParseNode*) * vector_size(definitions));
 
-    for (int64_t i = 0; i < definitions_counter; ++i) {
-        result->root_info.definitions[i] = definitions[i];
+    for (size_t i = 0; i < vector_size(definitions); ++i) {
+        result->root_info.definitions[i] = (ParseNode*)vector_get(definitions, i);
     }
+
+    vector_free_shallow(definitions);
 
     return result;
 }

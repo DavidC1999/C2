@@ -10,6 +10,7 @@
 #include "hashtable/hashtable.h"
 #include "parser.h"
 #include "tokenizer.h"
+#include "vector/vector.h"
 #include "xplatform.h"
 
 #define MAX_USER_FUNCTIONS 100
@@ -40,9 +41,10 @@ typedef struct BuiltinFunc {
 static HashTable* builtin_functions;
 
 static HashTable* global_variables;
-static HashTable* var_scopes[MAX_CALL_DEPTH];
-static int64_t curr_scope = -1;  // -1 for global scope
+static Vector* var_scopes;
 
+// Start off in the global scope to make sure global variables are stored in the global hashmap
+static bool is_global_scope = true;
 static HashTable* global_strings;
 
 static void panic(char* message, int64_t line) {
@@ -62,17 +64,20 @@ static void builtin_panic(char* message) {
 }
 
 static void var_scope_append() {
-    var_scopes[curr_scope] = hashtable_new(ANY_T, MAX_VARIABLE_AMT);
-    hashtable_force_free_values(var_scopes[curr_scope]);
-    ++curr_scope;
+    HashTable* new_scope = hashtable_new(ANY_T, MAX_VARIABLE_AMT);
+    vector_push(var_scopes, new_scope);
+    hashtable_force_free_values(new_scope);
 }
 
 static HashTable* var_scope_get_current() {
-    return var_scopes[curr_scope - 1];
+    size_t last_index = vector_size(var_scopes) - 1;
+    return (HashTable*)vector_get(var_scopes, last_index);
 }
 
 static void var_scope_destroy() {
-    hashtable_free(var_scopes[--curr_scope]);
+    void* to_destroy;
+    vector_pop(var_scopes, &to_destroy);
+    hashtable_free((HashTable*)to_destroy);
 }
 
 static int64_t* var_get_addr(ParseNode* node) {
@@ -103,7 +108,7 @@ static int64_t var_get(ParseNode* node) {
 static void var_insert_ptr(char* name, int64_t* ptr, int64_t line) {
     HashEntry _;
 
-    if (curr_scope == -1) {
+    if (is_global_scope == true) {
         if (hashtable_get(global_variables, &_, name)) {
             char buffer[100];
             snprintf(buffer, 100, "Variable with name '%s' already exists", name);
@@ -232,7 +237,7 @@ static void free_strings() {
     hashtable_free(global_strings);
 }
 
-static void define_func(ParseNode* func_def_node) {
+static void func_define(ParseNode* func_def_node) {
     UserFunc* new_func = malloc(sizeof(UserFunc));
     new_func->param_count = func_def_node->func_def_info.param_count;
     new_func->params = func_def_node->func_def_info.params;
@@ -263,22 +268,23 @@ static int64_t call_func(ParseNode* call_node) {
             panic(buffer, call_node->line);
         }
 
-        if (user_func->param_count > MAX_PARAMS_PER_FUNC) {
-            panic("Too many parameters passed for function call", call_node->line);
-        }
-
         // determine values to pass before creating scope in order to allow users to use parameters in the current scope
-        int64_t params_to_pass[MAX_PARAMS_PER_FUNC];
+        Vector* params_to_pass = vector_new(1);
 
         for (int64_t i = 0; i < user_func->param_count; ++i) {
-            params_to_pass[i] = visit_node(call_node->func_call_info.params[i]);
+            int64_t* val = malloc(sizeof(int64_t));
+            *val = visit_node(call_node->func_call_info.params[i]);
+            vector_push(params_to_pass, val);
         }
 
         var_scope_append();
 
         for (int64_t i = 0; i < user_func->param_count; ++i) {
-            var_define_manual(user_func->params[i], params_to_pass[i], call_node->line);
+            int64_t the_value = *(int64_t*)vector_get(params_to_pass, i);
+            var_define_manual(user_func->params[i], the_value, call_node->line);
         }
+
+        vector_free(params_to_pass);
 
         user_function_ret_val = 0;
         visit_node(user_func->statement);
@@ -327,7 +333,7 @@ static int64_t visit_node(ParseNode* node) {
 
     switch (node->type) {
         case N_FUNC_DEF: {
-            define_func(node);
+            func_define(node);
             break;
         }
         case N_VAR_DEF: {
@@ -457,6 +463,7 @@ static int64_t visit_node(ParseNode* node) {
 
 void interpret(ParseNode* node) {
     global_variables = hashtable_new(ANY_T, MAX_VARIABLE_AMT);
+    var_scopes = vector_new(1);  // initial capacity of one, because a program might just be the main function
 
     init_funcs();
     init_strings();
@@ -472,7 +479,8 @@ void interpret(ParseNode* node) {
         visit_node(definitions[i]);
     }
 
-    curr_scope = 0;
+    // We are going to call the main function. Anything defined from now on is not the global scope anymore
+    is_global_scope = false;
 
     HashEntry _;
     if (!hashtable_get(user_functions, &_, "main")) {
@@ -500,4 +508,6 @@ void interpret(ParseNode* node) {
     hashtable_free(user_functions);
     hashtable_free(global_variables);
     free_strings();
+
+    vector_free(var_scopes);
 }

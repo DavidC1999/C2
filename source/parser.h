@@ -6,9 +6,6 @@
 
 #include "tokenizer.h"
 
-#define MAX_STATEMENTS_PER_FUNC 1000
-#define MAX_PARAMS_PER_FUNC 100
-
 enum ParseNodeTypes {
     N_ROOT,
     N_FUNC_DEF,
