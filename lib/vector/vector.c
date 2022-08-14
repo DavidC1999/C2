@@ -17,6 +17,11 @@ void vector_free(Vector* v) {
     for (size_t i = 0; i < v->length; ++i) {
         free(v->arr[i]);
     }
+    vector_free_shallow(v);
+}
+
+// frees the vector but not the elements
+void vector_free_shallow(Vector* v) {
     free(v->arr);
     free(v);
 }

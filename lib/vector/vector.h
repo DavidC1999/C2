@@ -14,6 +14,9 @@ Vector* vector_new(size_t initial_size);
 
 void vector_free(Vector* v);
 
+// frees the vector, but not the elements
+void vector_free_shallow(Vector* v);
+
 // copies 'elem', does not take ownership
 void vector_push(Vector* v, void* elem);
 
