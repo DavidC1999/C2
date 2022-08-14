@@ -1,8 +1,12 @@
 #include "vector.h"
 
-Vector* vector_new(size_t elem_size, size_t initial_size) {
+#include <stdio.h>
+
+#define PTR_SIZE sizeof(void*)
+
+Vector* vector_new(size_t initial_size) {
     Vector* output = (Vector*)malloc(sizeof(Vector));
-    output->arr = malloc(elem_size * initial_size);
+    output->arr = (void**)malloc(sizeof(void*) * initial_size);
     output->length = 0;
     output->capacity = initial_size;
 
@@ -10,6 +14,9 @@ Vector* vector_new(size_t elem_size, size_t initial_size) {
 }
 
 void vector_free(Vector* v) {
+    for (size_t i = 0; i < v->length; ++i) {
+        free(v->arr[i]);
+    }
     free(v->arr);
     free(v);
 }
@@ -17,20 +24,20 @@ void vector_free(Vector* v) {
 void vector_push(Vector* v, void* elem) {
     if (v->capacity == v->length) {
         v->capacity *= 1.3;
-        v->arr = realloc(v->arr, v->capacity);
+
+        if (v->capacity == v->length) {  // can happen due to integer rounding
+            v->capacity += 1;
+        }
+
+        v->arr = realloc(v->arr, sizeof(void*) * v->capacity);
     }
 
-    uint8_t* elem_as_byte_arr = (uint8_t*)elem;
-    uint8_t* arr_as_byte_arr = (uint8_t*)v->arr;
-
-    for (size_t i = 0; i < v->elem_size; ++i) {
-        arr_as_byte_arr[v->elem_size * v->length + i] = elem_as_byte_arr[i];
-    }
+    v->arr[v->length] = elem;
     v->length += 1;
 }
 
 void* vector_get(Vector* v, size_t index) {
-    return (uint8_t*)v->arr + (index * v->elem_size);
+    return v->arr[index];
 }
 
 size_t vector_size(Vector* v) {

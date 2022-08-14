@@ -5,13 +5,12 @@
 #include <stdlib.h>
 
 typedef struct Vector {
-    void* arr;         // pointer to the first element
-    size_t elem_size;  // size of a single element
-    size_t length;     // amount of elements stored
-    size_t capacity;   // amount of elements able to be stored at this point in time
+    void** arr;       // array of void*
+    size_t length;    // amount of elements stored
+    size_t capacity;  // amount of elements able to be stored at this point in time
 } Vector;
 
-Vector* vector_new(size_t elem_size, size_t initial_size);
+Vector* vector_new(size_t initial_size);
 
 void vector_free(Vector* v);
 
